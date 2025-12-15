@@ -1,6 +1,6 @@
 <?php
 /*
-Version: 2025.12.15
+Version: 2025.12.16
 Plugin Name: TinyMCE编辑器
 Author: TinyMCE
 Author URL: https://www.emlog.net/plugin/detail/362
@@ -39,7 +39,7 @@ addAction('adm_footer', function () {
         const emlog_tinymce_link = <?php echo intval(Storage::getInstance('emlog_tinymce')->getValue('imglink')); ?>;
         const emlog_tinymce_boot = new MutationObserver(() => {
             emlog_tinymce_boot.disconnect();
-            const emlog_official_editor = Editor.editor.find('textarea[name=logcontent], textarea[name=pagecontent], textarea[name=t]').first();
+            const emlog_official_editor = Editor.editor.find('textarea').first();
             emlog_tinymce_area.name = emlog_official_editor.attr('name');
             emlog_tinymce_area.value = emlog_official_editor.val();
             emlog_tinymce_area.className = 'useTinyMCE';
@@ -59,7 +59,7 @@ addAction('adm_footer', function () {
             emlog_tinymce_conf = { <?php echo stripslashes(Storage::getInstance('emlog_tinymce')->getValue('options')); ?> };
             emlog_tinymce_init("../content/plugins/<?php echo $fold; ?>/core/tinymce.min.js", "../content/plugins/<?php echo $fold; ?>/zh_CN.js");
         });
-        emlog_tinymce_boot.observe(document.querySelector('textarea'), { attributes: true, childList: true, subtree: true });
+        emlog_tinymce_boot.observe(document.querySelector('#pagecontent textarea, #logcontent textarea, #t textarea'), { attributes: true, childList: true, subtree: true });
         $(document).on("focusin", function (e) { // Patch by 曦颜XY
             if ($(e.target).closest(".tox-textfield").length) { e.stopImmediatePropagation(); };
             if ($(e.target).closest(".tox-textarea").length) { e.stopImmediatePropagation(); };
