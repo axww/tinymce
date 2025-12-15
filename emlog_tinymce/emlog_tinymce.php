@@ -1,6 +1,6 @@
 <?php
 /*
-Version: 2025.12.02
+Version: 2025.12.15
 Plugin Name: TinyMCE编辑器
 Author: TinyMCE
 Author URL: https://www.emlog.net/plugin/detail/362
@@ -39,7 +39,7 @@ addAction('adm_footer', function () {
         const emlog_tinymce_link = <?php echo intval(Storage::getInstance('emlog_tinymce')->getValue('imglink')); ?>;
         const emlog_tinymce_boot = new MutationObserver(() => {
             emlog_tinymce_boot.disconnect();
-            const emlog_official_editor = Editor.editor.find('textarea').first();
+            const emlog_official_editor = Editor.editor.find('textarea[name=logcontent], textarea[name=pagecontent], textarea[name=t]').first();
             emlog_tinymce_area.name = emlog_official_editor.attr('name');
             emlog_tinymce_area.value = emlog_official_editor.val();
             emlog_tinymce_area.className = 'useTinyMCE';
