@@ -1,4 +1,7 @@
 .tox {
+  a.tox-tag {
+    cursor: pointer;
+  }
   .tox-tag {
     width: fit-content;
     display: flex;
@@ -10,8 +13,14 @@
     line-height: var(--tox-private-base-value, @base-value);
     font-size: var(--tox-private-font-size-xs, @font-size-xs);
 
-    .tox-tag__icon {
+    .tox-icon {
       height: var(--tox-private-base-value, @base-value);
+    }
+
+    .tox-tag__label {
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
     }
 
     .tox-tag__close {
