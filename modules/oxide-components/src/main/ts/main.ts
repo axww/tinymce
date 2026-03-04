@@ -1,8 +1,8 @@
 import { UserPromptBubble } from './bespoke/tinymceai/bubbles/UserPromptBubble';
-import ErrorMessage from './bespoke/tinymceai/error/ErrorMessage';
 import { Spinner } from './bespoke/tinymceai/spinner/Spinner';
 import { Tag } from './bespoke/tinymceai/tag/Tag';
 import * as Accordion from './components/accordion/Accordion';
+import { Alert } from './components/alert/Alert';
 import { AutoResizingTextarea } from './components/autoresizingtextarea/AutoResizingTextarea';
 import { Button } from './components/button/Button';
 import * as Card from './components/card/Card';
@@ -17,6 +17,7 @@ import * as Menu from './components/menu/Menu';
 import * as MenuRenderer from './components/menu/MenuRenderer';
 import * as SegmentedControl from './components/segmentedcontrol/SegmentedControl';
 import { ToolbarInputForm } from './components/toolbarInputForm/ToolbarInputForm';
+import * as Tooltip from './components/tooltip/Tooltip';
 import { useUniverse } from './contexts/UniverseContext/Universe';
 import { UniverseProvider } from './contexts/UniverseContext/UniverseProvider';
 import type { UniverseResources } from './contexts/UniverseContext/UniverseTypes';
@@ -28,6 +29,7 @@ import * as FocusHelpers from './utils/FocusHelpers';
 
 export {
   Accordion,
+  Alert,
   AutoResizingTextarea,
   Bem,
   Button,
@@ -36,7 +38,6 @@ export {
   ContextToolbar,
   Draggable,
   Dropdown,
-  ErrorMessage,
   ExpandableBox,
   FloatingSidebar,
   FocusHelpers,
@@ -44,15 +45,16 @@ export {
   IconButton,
   KeyboardNavigationHooks,
   KeyboardNavigationTypes,
-  Spinner,
-  Tag,
   Menu,
   MenuRenderer,
+  Spinner,
+  Tag,
+  ToolbarInputForm,
+  Tooltip,
   SegmentedControl,
   UniverseProvider,
   useUniverse,
-  UserPromptBubble,
-  ToolbarInputForm
+  UserPromptBubble
 };
 
 export type { UniverseResources };
