@@ -120,8 +120,8 @@ export const registerEvents = (editor: Editor, undoManager: UndoManager, locks: 
       return;
     }
 
-    const hasOnlyMetaOrCtrlModifier = Env.os.isMacOS() ? e.metaKey : e.ctrlKey && !e.altKey;
-    if (hasOnlyMetaOrCtrlModifier) {
+    const hasMetaOrCtrlModifier = Env.os.isMacOS() ? e.metaKey : e.ctrlKey && !e.altKey;
+    if (hasMetaOrCtrlModifier && (e.key === 'Backspace' || e.key === 'Delete')) {
       undoManager.beforeChange();
     }
   });
