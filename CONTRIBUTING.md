@@ -41,7 +41,7 @@ This will produce an editor build in `modules/tinymce/js`, with distribution zip
 
 * `bun run dev`
 
-This performs compilation steps which webpack requires but are usually once-off. It also runs `tsc` to make later commands faster (`tsc -b` enforces incremental compilation).
+This performs compilation steps which rspack requires but are usually once-off. It also runs `tsc` to make later commands faster (`tsc -b` enforces incremental compilation).
 
 ### Builds
 
@@ -56,7 +56,7 @@ There are many top-level helper scripts for TinyMCE and Oxide (the default skin)
 ### TinyMCE
 
 `bun start`
-This boots the TinyMCE webpack dev server at http://localhost:3000. With this running changes to _any_ `.ts` source file in the monorepo (excluding tests) should be reflected in WebPack within a few seconds.
+This boots the TinyMCE rspack dev server at http://localhost:3000.
 
 `bun watch`
 runs `tsc -b -w` for those times when you don't need to iterate in the browser.
@@ -79,7 +79,7 @@ bun oxide-icons-build
 
 These commands build the skin and icons but should not normally be required outside of other development scripts.
 
-`bun oxide-start` will set up a watch and rebuild process for creating custom skins.
+`bun oxide-start` will set up a watch and rebuild process for creating custom skins. It requires a local TinyMCE build first — run `bun run build` from the repository root before `bun oxide-start`, otherwise it will exit with an error.
 
 ### Focussed development
 
@@ -179,4 +179,3 @@ Ensure the paths all match. e.g. if you're exposing `modules/tinymce/src/core/ma
 2. The type is `TinyMCE.dom.StyleSheetLoader`
 3. The constructor function is `publicApi.dom.StyleSheetLoader`
 4. globals.json contains `"tinymce.core.api.dom.StyleSheetLoader"`
-
