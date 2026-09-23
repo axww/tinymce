@@ -1,6 +1,6 @@
 import { Fun } from '@ephox/katamari';
 import { IconButton } from 'oxide-components/components/iconbutton/IconButton';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import { describe, it } from 'vitest';
 
 import { renderVisual } from './utils/VisualTestUtils';
@@ -13,6 +13,7 @@ const leftArrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height
 
 const resources = {
   getIcon: Fun.constant(leftArrowIcon),
+  translate: Fun.identity,
 };
 
 const VARIANTS = [ 'primary', 'secondary', 'outlined', 'naked' ] as const;
@@ -22,7 +23,7 @@ describe('visual.IconButtonTest', () => {
     it(`renders the ${variant} state`, async () => {
       const screen = renderVisual(
         <UniverseProvider resources={resources}>
-          <IconButton icon='left-arrow' variant={variant} />
+          <IconButton icon='left-arrow' variant={variant} aria-label='Go back' />
         </UniverseProvider>
       );
       await screen.expectScreenshot(`icon-button-${variant}`);

@@ -1,9 +1,8 @@
 import { Fun } from '@ephox/katamari';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
+import { IconButton } from 'oxide-components/components/iconbutton/IconButton';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import { fn } from 'storybook/test';
-
-import { IconButton } from '../iconbutton/IconButton';
 
 import * as FloatingSidebar from './FloatingSidebar';
 import type { FloatingSidebarProps } from './FloatingSidebar';
@@ -113,6 +112,7 @@ const resolvedIcon = `<svg width="24" height="24">
 
 const mockUniverse = {
   getIcon: Fun.constant(resolvedIcon),
+  translate: Fun.identity,
 };
 
 export const ButtonInHeader: Story = {
@@ -127,7 +127,7 @@ export const ButtonInHeader: Story = {
       <FloatingSidebar.Header>
         <div className='tox-sidebar-content__title'>Floating Header</div>
         <div className='tox-sidebar-content__header-close-button'>
-          <IconButton variant='naked' icon="close" onClick={() => window.alert('Close the sidebar!')} />
+          <IconButton variant='naked' icon="close" aria-label="Close" onClick={() => window.alert('Close the sidebar!')} />
         </div>
       </FloatingSidebar.Header>
       <div style={{ padding: '12px' }}>

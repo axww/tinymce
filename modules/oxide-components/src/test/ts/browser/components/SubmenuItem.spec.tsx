@@ -1,11 +1,14 @@
 /* eslint-disable max-len */
+import { Fun } from '@ephox/katamari';
 import type { CommonMenuItemInstanceApi } from 'oxide-components/components/menu/internals/Types';
 import * as Menu from 'oxide-components/components/menu/Menu';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import * as Bem from 'oxide-components/utils/Bem';
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent, type Locator } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+
+import * as SnapshotTestUtils from './utils/SnapshotTestUtils';
 
 const iconResolver = (icon: string): string => {
   const icons = new Map<string, string>([
@@ -35,6 +38,7 @@ const iconResolver = (icon: string): string => {
 
 const mockUniverse = {
   getIcon: iconResolver,
+  translate: Fun.identity,
 };
 
 const waitForElementText = async (getByText: (text: string) => Locator, text: string) => {
@@ -338,5 +342,47 @@ describe('browser.SubmenuItemTest', () => {
     // Focus should remain on the sibling menuitem after the auto-close.
     const siblingMenuItem = getByText('Sibling Item').element().closest('[role="menuitem"]');
     await expect.poll(() => document.activeElement).toBe(siblingMenuItem);
+  });
+
+  describe('Snapshot Tests', () => {
+    const renderSubmenu = (submenusSide?: 'left' | 'right') => render(
+      <UniverseProvider resources={SnapshotTestUtils.stubIconUniverse}>
+        <Menu.Root>
+          <Menu.SubmenuItem
+            submenusSide={submenusSide}
+            submenuContent={
+              <Menu.Root>
+                <Menu.Item onAction={vi.fn()}>Nested Item</Menu.Item>
+              </Menu.Root>
+            }
+          >
+            Submenu
+          </Menu.SubmenuItem>
+        </Menu.Root>
+      </UniverseProvider>,
+      { wrapper }
+    );
+
+    it('TINYMCE-14505: Should match snapshot for a closed submenu', async () => {
+      const { asFragment, getByText } = renderSubmenu();
+      await waitForElementText(getByText, 'Submenu');
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Closed submenu');
+    });
+
+    it('TINYMCE-14505: Should match snapshot for an open submenu', async () => {
+      const { asFragment, getByText } = renderSubmenu();
+      await waitForElementText(getByText, 'Submenu');
+      await userEvent.hover(getByText('Submenu'));
+      await waitForElementText(getByText, 'Nested Item');
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Open submenu');
+    });
+
+    it('TINYMCE-14505: Should match snapshot for an open left-hand submenu', async () => {
+      const { asFragment, getByText } = renderSubmenu('left');
+      await waitForElementText(getByText, 'Submenu');
+      await userEvent.hover(getByText('Submenu'));
+      await waitForElementText(getByText, 'Nested Item');
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Open left-hand submenu');
+    });
   });
 });

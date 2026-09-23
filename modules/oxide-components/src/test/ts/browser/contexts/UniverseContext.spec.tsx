@@ -1,12 +1,14 @@
-import { useUniverse } from 'oxide-components/contexts/UniverseContext/Universe';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
-import type { UniverseResources } from 'oxide-components/contexts/UniverseContext/UniverseTypes';
+import { Fun } from '@ephox/katamari';
+import { useUniverse } from 'oxide-components/contexts/universecontext/Universe';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
+import type { UniverseResources } from 'oxide-components/contexts/universecontext/UniverseTypes';
 import React from 'react';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 
 const createMockUniverse = (overrides?: Partial<UniverseResources>): UniverseResources => ({
   getIcon: (name: string) => `<svg data-icon="${name}">mock-${name}</svg>`,
+  translate: Fun.identity,
   ...overrides
 });
 

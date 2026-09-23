@@ -1,11 +1,10 @@
 import { Fun } from '@ephox/katamari';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
+import { Button } from 'oxide-components/components/button/Button';
+import { IconButton } from 'oxide-components/components/iconbutton/IconButton';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import React, { useMemo, useRef, useState } from 'react';
 import { fn } from 'storybook/test';
-
-import { Button } from '../button/Button';
-import { IconButton } from '../iconbutton/IconButton';
 
 import * as ContextToolbar from './ContextToolbar';
 
@@ -17,6 +16,7 @@ const resolvedIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height=
 
 const mockUniverse = {
   getIcon: Fun.constant(resolvedIcon),
+  translate: Fun.identity,
 };
 
 const meta = {
@@ -223,8 +223,8 @@ export const WithIconButtons: Story = {
           </ContextToolbar.Trigger>
           <ContextToolbar.Toolbar>
             <ContextToolbar.Group>
-              <IconButton variant='primary' icon='checkmark' onClick={fn()} />
-              <IconButton variant='secondary' icon='cross' onClick={fn()} />
+              <IconButton variant='primary' icon='checkmark' aria-label='Accept' onClick={fn()} />
+              <IconButton variant='secondary' icon='cross' aria-label='Reject' onClick={fn()} />
             </ContextToolbar.Group>
           </ContextToolbar.Toolbar>
         </ContextToolbar.Root>
@@ -276,7 +276,7 @@ export const MixedContent: Story = {
           <ContextToolbar.Toolbar>
             <UniverseProvider resources={mockUniverse}>
               <ContextToolbar.Group>
-                <IconButton icon='arrow-up' onClick={fn()} />
+                <IconButton icon='arrow-up' aria-label='Previous' onClick={fn()} />
 
                 <span style={{
                   padding: '8px',
@@ -286,7 +286,7 @@ export const MixedContent: Story = {
                 }}>
                   1/3
                 </span>
-                <IconButton icon='arrow-down' onClick={fn()} />
+                <IconButton icon='arrow-down' aria-label='Next' onClick={fn()} />
               </ContextToolbar.Group>
             </UniverseProvider>
             <ContextToolbar.Group>

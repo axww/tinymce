@@ -2,7 +2,7 @@ import { Fun } from '@ephox/katamari';
 import * as FloatingSidebar from 'oxide-components/components/floatingsidebar/FloatingSidebar';
 import type { FloatingSidebarProps } from 'oxide-components/components/floatingsidebar/FloatingSidebar';
 import { IconButton } from 'oxide-components/components/iconbutton/IconButton';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import { describe, it } from 'vitest';
 
 import { renderVisual } from './utils/VisualTestUtils';
@@ -14,6 +14,7 @@ const closeIcon = `<svg width="24" height="24">
 
 const resources = {
   getIcon: Fun.constant(closeIcon),
+  translate: Fun.identity,
 };
 
 const args: FloatingSidebarProps = {
@@ -53,7 +54,7 @@ describe('visual.FloatingSidebarTest', () => {
           <FloatingSidebar.Header>
             <div className='tox-sidebar-content__title'>Floating Header</div>
             <div className='tox-sidebar-content__header-close-button'>
-              <IconButton variant='naked' icon='close' onClick={Fun.noop} />
+              <IconButton variant='naked' icon='close' aria-label='Close' onClick={Fun.noop} />
             </div>
           </FloatingSidebar.Header>
           {sidebarContent}

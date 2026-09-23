@@ -1,11 +1,14 @@
 /* eslint-disable max-len */
+import { Fun } from '@ephox/katamari';
 import type { CommonMenuItemInstanceApi } from 'oxide-components/components/menu/internals/Types';
 import * as Menu from 'oxide-components/components/menu/Menu';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import * as Bem from 'oxide-components/utils/Bem';
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent, type Locator } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+
+import * as SnapshotTestUtils from './utils/SnapshotTestUtils';
 
 const iconResolver = (icon: string): string => {
   const icons = new Map<string, string>([
@@ -35,6 +38,7 @@ const iconResolver = (icon: string): string => {
 
 const mockUniverse = {
   getIcon: iconResolver,
+  translate: Fun.identity,
 };
 
 const waitForElementText = async (getByText: (text: string) => Locator, text: string) => {
@@ -181,5 +185,33 @@ describe('browser.MenuItemTest', () => {
       await userEvent.click(getByText('Test Item'));
       expect(onActionSpy).not.toHaveBeenCalled();
     }
+  });
+
+  describe('Snapshot Tests', () => {
+    const renderItems = (children: React.ReactNode) => render(
+      <UniverseProvider resources={SnapshotTestUtils.stubIconUniverse}>
+        <Menu.Root>{children}</Menu.Root>
+      </UniverseProvider>,
+      { wrapper }
+    );
+
+    it('TINYMCE-14505: Should match snapshot for a plain menu item', () => {
+      const { asFragment } = renderItems(<Menu.Item onAction={vi.fn()}>Plain item</Menu.Item>);
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Plain item');
+    });
+
+    it('TINYMCE-14505: Should match snapshot for a menu item with an icon and a shortcut', () => {
+      const { asFragment } = renderItems(
+        <Menu.Item icon="checkmark" shortcut="Ctrl+B" onAction={vi.fn()}>Item with icon</Menu.Item>
+      );
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Item with icon and shortcut');
+    });
+
+    it('TINYMCE-14505: Should match snapshot for a disabled menu item', () => {
+      const { asFragment } = renderItems(
+        <Menu.Item enabled={false} onAction={vi.fn()}>Disabled item</Menu.Item>
+      );
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Disabled item');
+    });
   });
 });

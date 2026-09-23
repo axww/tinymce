@@ -1,15 +1,17 @@
 import { Fun } from '@ephox/katamari';
+import { Confirmation } from 'oxide-components/components/confirmation/Confirmation';
 import { ConfirmationHost, type ConfirmationHostHandle } from 'oxide-components/components/confirmation/internals/ConfirmationHost';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import * as Bem from 'oxide-components/utils/Bem';
 import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
+import * as SnapshotTestUtils from './utils/SnapshotTestUtils';
+
 describe('browser.ConfirmationTest', () => {
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <div className={Bem.block('tox')}>{children}</div>
-  );
+  const wrapper = SnapshotTestUtils.snapshotWrapper;
 
   it('TINY-13783: should call onConfirm when the confirm button is clicked', async () => {
     const ref = createRef<ConfirmationHostHandle>();
@@ -58,5 +60,86 @@ describe('browser.ConfirmationTest', () => {
     ref.current?.confirm({ text: 'Are you sure?', onConfirm: vi.fn().mockResolvedValue(undefined) });
 
     await expect.poll(() => document.activeElement?.getAttribute('aria-label')).toBe('Yes');
+  });
+
+  describe('Snapshot Tests', () => {
+    it('TINYMCE-14505: Should match snapshot for the idle dialog', () => {
+      const { asFragment } = render(
+        <Confirmation
+          text="Are you sure?"
+          buttonName="Yes"
+          cancelBtnName="No"
+          onConfirm={() => Promise.resolve()}
+          onCancel={() => Promise.resolve()}
+        />,
+        { wrapper }
+      );
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Idle dialog');
+    });
+
+    it('TINYMCE-14505: Should match snapshot for the confirming dialog', async () => {
+      const { asFragment, getByLabelText, container } = render(
+        <Confirmation
+          text="Are you sure?"
+          buttonName="Yes"
+          cancelBtnName="No"
+          onConfirm={() => new Promise<void>(Fun.noop)}
+          onCancel={() => Promise.resolve()}
+        />,
+        { wrapper }
+      );
+
+      await userEvent.click(getByLabelText('Yes'));
+      await expect.poll(() => container.querySelector(Bem.elementSelector('tox-ai', 'spinner'))).not.toBeNull();
+
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Confirming dialog');
+    });
+  });
+
+  describe('Universe translate', () => {
+
+    it('TINYMCE-14751: should render the translated Yes/No labels when buttonName and cancelBtnName are not provided', async () => {
+      const translate = vi.fn<(text: string) => string>((text) => `translated-${text}`);
+      const mockUniverse = { getIcon: Fun.constant(''), translate };
+      const ref = createRef<ConfirmationHostHandle>();
+
+      const { getByLabelText } = render(
+        <UniverseProvider resources={mockUniverse}>
+          <ConfirmationHost ref={ref} />
+        </UniverseProvider>,
+        { wrapper }
+      );
+
+      ref.current?.confirm({ text: 'Are you sure?', onConfirm: vi.fn().mockResolvedValue(undefined) });
+
+      await expect.poll(() => document.querySelector(Bem.blockSelector('tox-dialog-wrap'))).not.toBeNull();
+
+      expect(getByLabelText('translated-Yes').element()).toBeVisible();
+      expect(getByLabelText('translated-No').element()).toBeVisible();
+      expect(translate).toHaveBeenCalledWith('Yes');
+      expect(translate).toHaveBeenCalledWith('No');
+    });
+
+    it('TINYMCE-14751: should render the provided buttonName/cancelBtnName instead of calling translate', () => {
+      const translate = vi.fn<(text: string) => string>((text) => `translated-${text}`);
+      const mockUniverse = { getIcon: Fun.constant(''), translate };
+
+      const { getByLabelText } = render(
+        <UniverseProvider resources={mockUniverse}>
+          <Confirmation
+            text="Are you sure?"
+            buttonName="Confirm"
+            cancelBtnName="Deny"
+            onConfirm={() => Promise.resolve()}
+            onCancel={() => Promise.resolve()}
+          />
+        </UniverseProvider>,
+        { wrapper }
+      );
+
+      expect(getByLabelText('Confirm').element()).toBeVisible();
+      expect(getByLabelText('Deny').element()).toBeVisible();
+      expect(translate).not.toHaveBeenCalled();
+    });
   });
 });

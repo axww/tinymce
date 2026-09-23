@@ -1,6 +1,7 @@
 /* eslint-disable max-len */
+import { Fun } from '@ephox/katamari';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { UniverseProvider } from 'oxide-components/main';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import { fn } from 'storybook/test';
 
 import { ToolbarInputForm, type ToolbarInputFormProps } from './ToolbarInputForm';
@@ -58,6 +59,7 @@ const iconResolver = (icon: string): string => {
 
 const mockUniverse = {
   getIcon: iconResolver,
+  translate: Fun.identity,
 };
 
 const render = (args: ToolbarInputFormProps): JSX.Element => {

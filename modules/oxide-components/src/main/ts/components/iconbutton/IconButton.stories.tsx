@@ -1,6 +1,7 @@
-import { Obj } from '@ephox/katamari';
+import { Fun, Obj } from '@ephox/katamari';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { UniverseProvider } from 'oxide-components/main';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
+import type { ComponentType } from 'react';
 
 import { IconButton } from './IconButton';
 
@@ -14,7 +15,8 @@ const icons: Record<string, string> = {
 
 const mockUniverse = {
   getIcon: (name: string) =>
-    Obj.get(icons, name).getOrDie('Failed to get icon')
+    Obj.get(icons, name).getOrDie('Failed to get icon'),
+  translate: Fun.identity
 };
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
@@ -22,7 +24,8 @@ const meta = {
   title: 'components/IconButton',
   component: IconButton,
   decorators: [
-    (Story) => (
+    // Annotated so ArgsFromMeta does not feed IconButtonProps through UnionToIntersection, which would collapse the name union to never.
+    (Story: ComponentType): JSX.Element => (
       <UniverseProvider resources={mockUniverse}>
         <Story />
       </UniverseProvider>
@@ -36,7 +39,8 @@ const meta = {
   tags: [ 'autodocs' ],
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#action-args
   args: {
-    icon: 'left-arrow',
+    'icon': 'left-arrow',
+    'aria-label': 'Go back',
   },
 } satisfies Meta<typeof IconButton>;
 

@@ -1,8 +1,10 @@
-import { Arr } from '@ephox/katamari';
+import { Arr, Fun } from '@ephox/katamari';
 import { Icon } from 'oxide-components/components/icon/Icon';
-import { UniverseProvider } from 'oxide-components/main';
+import { UniverseProvider } from 'oxide-components/Main';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+
+import * as SnapshotTestUtils from './utils/SnapshotTestUtils';
 
 const chevronDownTestIconId = 'chevron-down-icon';
 const chevronUpTestIconId = 'chevron-up-icon';
@@ -12,6 +14,7 @@ describe('browser.components.Icon', () => {
     const getIcon = vi.fn((icon: string) => `<svg id="${icon}"></svg>`);
     const mockUniverse = {
       getIcon,
+      translate: Fun.identity,
     };
 
     const { getByTestId } = render(
@@ -28,6 +31,21 @@ describe('browser.components.Icon', () => {
     Arr.each([ chevronDownTestIconId, chevronUpTestIconId ], (id) => {
       const element = getByTestId(id);
       expect(element).toBeVisible();
+    });
+  });
+
+  describe('Snapshot Tests', () => {
+    it('TINYMCE-14505: Should match snapshot for a rendered icon', () => {
+      const { asFragment } = render(<Icon icon="chevron-down" />, { wrapper: SnapshotTestUtils.snapshotWrapper });
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Icon');
+    });
+
+    it('TINYMCE-14505: Should match snapshot for an icon with extra span attributes', () => {
+      const { asFragment } = render(
+        <Icon icon="chevron-up" aria-hidden="true" data-testid={chevronUpTestIconId} />,
+        { wrapper: SnapshotTestUtils.snapshotWrapper }
+      );
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Icon with span attributes');
     });
   });
 });

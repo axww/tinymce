@@ -1,12 +1,15 @@
 import { Fun } from '@ephox/katamari';
 import * as Menu from 'oxide-components/components/menu/Menu';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import * as Bem from 'oxide-components/utils/Bem';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 
+import * as SnapshotTestUtils from './utils/SnapshotTestUtils';
+
 const mockUniverse = {
   getIcon: Fun.constant(''),
+  translate: Fun.identity,
 };
 
 describe('browser.MenuDividerTest', () => {
@@ -73,5 +76,21 @@ describe('browser.MenuDividerTest', () => {
 
     expect(separator).not.toBeNull();
     expect(menuItems.length).toBe(2);
+  });
+
+  describe('Snapshot Tests', () => {
+    it('TINYMCE-14505: Should match snapshot for a divider between menu items', () => {
+      const { asFragment } = render(
+        <UniverseProvider resources={SnapshotTestUtils.stubIconUniverse}>
+          <Menu.Root>
+            <Menu.Item onAction={Fun.noop}>Above</Menu.Item>
+            <Menu.Divider />
+            <Menu.Item onAction={Fun.noop}>Below</Menu.Item>
+          </Menu.Root>
+        </UniverseProvider>,
+        { wrapper }
+      );
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Divider between items');
+    });
   });
 });

@@ -1,6 +1,7 @@
 import { Fun } from '@ephox/katamari';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { UniverseProvider, type UniverseResources } from 'oxide-components/main';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
+import type { UniverseResources } from 'oxide-components/contexts/universecontext/UniverseTypes';
 
 import { Tag } from './Tag';
 
@@ -21,6 +22,7 @@ const resources: UniverseResources = {
     <path fill="#222F3E" fill-rule="evenodd" d="M11.723 5.62 9.356 8l2.367 2.38a.95.95 0 0 1-1.343 1.343L8 9.356l-2.38 2.367a.95.95 0 0 1-1.343-1.343L6.644 8 4.277 5.62A.95.95 0 0 1 5.62 4.277L8 6.644l2.38-2.367a.95.95 0 0 1 1.343 1.343Z"/>
   </svg>
 `),
+  translate: Fun.identity,
 };
 
 export const ClosableTag: Story = {
@@ -28,6 +30,7 @@ export const ClosableTag: Story = {
     closeable: true,
     link: false,
     label: 'Value',
+    closeAriaLabel: 'Remove tag',
     onClose: Fun.noop
   },
   render: (args) => (
@@ -42,6 +45,7 @@ export const FocusedClosableTag: Story = {
     closeable: true,
     link: false,
     label: 'Value',
+    closeAriaLabel: 'Remove tag',
     onClose: Fun.noop
   },
   render: (args) => {

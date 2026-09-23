@@ -1,16 +1,19 @@
 import { Fun } from '@ephox/katamari';
 import { ExpandableBox, type ExpandableBoxProps } from 'oxide-components/components/expandablebox/ExpandableBox';
-import { UniverseProvider } from 'oxide-components/main';
+import { UniverseProvider } from 'oxide-components/Main';
 import * as Bem from 'oxide-components/utils/Bem';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent, type Locator } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
+import * as SnapshotTestUtils from './utils/SnapshotTestUtils';
+
 describe('browser.components.ExpandableBoxTest', () => {
   const getIcon = vi.fn((icon: string) => `<svg id="${icon}"></svg>`);
   const mockUniverse = {
     getIcon,
+    translate: Fun.identity,
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => {
@@ -65,15 +68,15 @@ describe('browser.components.ExpandableBoxTest', () => {
     const { asFragment, getByText } = render(<TestComponent />, { wrapper });
 
     await waitForElementText(getByText, 'Expand');
-    expect(asFragment()).toMatchSnapshot('1. Before expand click');
+    expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('1. Before expand click');
 
     await userEvent.click(getByText('Expand'));
     await waitForElementText(getByText, 'Collapse');
-    expect(asFragment()).toMatchSnapshot('2. After expand click');
+    expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('2. After expand click');
 
     await userEvent.click(getByText('Collapse'));
     await waitForElementText(getByText, 'Expand');
-    expect(asFragment()).toMatchSnapshot('3. After collapse click');
+    expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('3. After collapse click');
   });
 
   it('Should not render expand if the content fits within maxHeight', async () => {
@@ -88,7 +91,7 @@ describe('browser.components.ExpandableBoxTest', () => {
       { wrapper }
     );
 
-    expect(asFragment()).toMatchSnapshot('Content fits within maxHeight');
+    expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Content fits within maxHeight');
   });
 
   it('Should be able to set maxHeight, collapseText and expandText', async () => {
@@ -106,10 +109,54 @@ describe('browser.components.ExpandableBoxTest', () => {
       { wrapper }
     );
 
-    expect(asFragment()).toMatchSnapshot('1. Content fits within maxHeight');
+    expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('1. Content fits within maxHeight');
 
     await userEvent.click(getByText('Show more'));
     await waitForElementText(getByText, 'Show less');
-    expect(asFragment()).toMatchSnapshot('2. After show mode click');
+    expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('2. After show mode click');
+  });
+
+  describe('Universe translate', () => {
+    it('TINYMCE-14751: should render the translated expand and collapse labels when not provided', async () => {
+      const translate = vi.fn<(text: string) => string>((text) => `translated-${text}`);
+      const localMockUniverse = { getIcon, translate };
+
+      const { getByText } = render(
+        <UniverseProvider resources={localMockUniverse}>
+          <TestComponentToggle {...defaultProps}>
+            <div style={{ height: '200px' }}>Hello world</div>
+          </TestComponentToggle>
+        </UniverseProvider>,
+        { wrapper }
+      );
+
+      await waitForElementText(getByText, 'translated-Expand');
+      expect(translate).toHaveBeenCalledWith('Expand');
+
+      await userEvent.click(getByText('translated-Expand'));
+      await waitForElementText(getByText, 'translated-Collapse');
+      expect(translate).toHaveBeenCalledWith('Collapse');
+    });
+
+    it('TINYMCE-14751: should render the provided expand and collapse labels instead of calling translate', async () => {
+      const translate = vi.fn<(text: string) => string>((text) => `translated-${text}`);
+      const localMockUniverse = { getIcon, translate };
+
+      const { getByText } = render(
+        <UniverseProvider resources={localMockUniverse}>
+          <TestComponentToggle {...defaultProps} expandLabel="Show more" collapseLabel="Show less">
+            <div style={{ height: '200px' }}>Hello world</div>
+          </TestComponentToggle>
+        </UniverseProvider>,
+        { wrapper }
+      );
+
+      await waitForElementText(getByText, 'Show more');
+      expect(translate).not.toHaveBeenCalled();
+
+      await userEvent.click(getByText('Show more'));
+      await waitForElementText(getByText, 'Show less');
+      expect(translate).not.toHaveBeenCalled();
+    });
   });
 });

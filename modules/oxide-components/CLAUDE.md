@@ -44,7 +44,7 @@ Visual regression tests are per-component `ComponentName.visual.spec.tsx` files 
 - `src/main/ts/components/` - Shared components (each has `Component.tsx` and `Component.stories.tsx`)
 - `src/main/ts/keynav/` - Keyboard navigation system with hooks interface
 - `src/main/ts/utils/` - Utilities (`Styles.ts` for CSS classes, `FocusHelpers.ts`)
-- `src/main/ts/main.ts` - Library exports
+- `src/main/ts/Main.ts` - Library exports
 - `src/demo/ts/App.tsx` - Scratch area for testing components during development
 
 ### Key Patterns
@@ -125,7 +125,7 @@ This works because `Dropdown.Trigger` spreads `...props` onto the button child, 
 
 ### IconButton
 - Renders a single icon inside a `Button` with the `tox-button--icon` class
-- Props: `icon` (required) + all `ButtonProps` except `children` (forbidden) and `className` (forbidden)
+- Props: `icon` (required) + a required accessible name — exactly one of `aria-label` or `aria-labelledby` — + all other `ButtonProps` except `children` (forbidden) and `className` (forbidden)
 - Use `Button` instead when the button needs text content alongside an icon
 
 ## Testing Dropdown Components

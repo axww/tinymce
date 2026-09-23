@@ -2,7 +2,7 @@ import { Fun } from '@ephox/katamari';
 import { Button } from 'oxide-components/components/button/Button';
 import * as ContextToolbar from 'oxide-components/components/contexttoolbar/ContextToolbar';
 import { IconButton } from 'oxide-components/components/iconbutton/IconButton';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import { useMemo, useRef, useState } from 'react';
 import { describe, expect, it } from 'vitest';
 
@@ -16,6 +16,7 @@ const resolvedIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height=
 
 const resources = {
   getIcon: Fun.constant(resolvedIcon),
+  translate: Fun.identity,
 };
 
 const waitForToolbar = async () => {
@@ -71,8 +72,8 @@ const WithIconButtonsContextToolbar = () => (
         </ContextToolbar.Trigger>
         <ContextToolbar.Toolbar>
           <ContextToolbar.Group>
-            <IconButton variant='primary' icon='checkmark' onClick={Fun.noop} />
-            <IconButton variant='secondary' icon='cross' onClick={Fun.noop} />
+            <IconButton variant='primary' icon='checkmark' aria-label='Accept' onClick={Fun.noop} />
+            <IconButton variant='secondary' icon='cross' aria-label='Reject' onClick={Fun.noop} />
           </ContextToolbar.Group>
         </ContextToolbar.Toolbar>
       </ContextToolbar.Root>
@@ -117,7 +118,7 @@ const MixedContentContextToolbar = () => (
       <ContextToolbar.Toolbar>
         <UniverseProvider resources={resources}>
           <ContextToolbar.Group>
-            <IconButton icon='arrow-up' onClick={Fun.noop} />
+            <IconButton icon='arrow-up' aria-label='Previous' onClick={Fun.noop} />
             <span style={{
               padding: '8px',
               fontSize: '12px',
@@ -126,7 +127,7 @@ const MixedContentContextToolbar = () => (
             }}>
               1/3
             </span>
-            <IconButton icon='arrow-down' onClick={Fun.noop} />
+            <IconButton icon='arrow-down' aria-label='Next' onClick={Fun.noop} />
           </ContextToolbar.Group>
         </UniverseProvider>
         <ContextToolbar.Group>

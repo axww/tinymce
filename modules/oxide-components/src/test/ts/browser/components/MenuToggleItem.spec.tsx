@@ -1,11 +1,14 @@
 /* eslint-disable max-len */
+import { Fun } from '@ephox/katamari';
 import type { ToggleMenuItemInstanceApi } from 'oxide-components/components/menu/internals/Types';
 import * as Menu from 'oxide-components/components/menu/Menu';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import * as Bem from 'oxide-components/utils/Bem';
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent, type Locator } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+
+import * as SnapshotTestUtils from './utils/SnapshotTestUtils';
 
 const iconResolver = (icon: string): string => {
   const icons = new Map<string, string>([
@@ -35,6 +38,7 @@ const iconResolver = (icon: string): string => {
 
 const mockUniverse = {
   getIcon: iconResolver,
+  translate: Fun.identity,
 };
 
 const waitForElementText = async (getByText: (text: string) => Locator, text: string) => {
@@ -272,5 +276,35 @@ describe('browser.MenuToggleItemTest', () => {
     await userEvent.click(toggle2);
     await expect.poll(() => toggle2.getAttribute('aria-checked')).toBe('true');
     expect(toggle1.getAttribute('aria-checked')).toBe('true');
+  });
+
+  describe('Snapshot Tests', () => {
+    const renderItems = (children: React.ReactNode) => render(
+      <UniverseProvider resources={SnapshotTestUtils.stubIconUniverse}>
+        <Menu.Root>{children}</Menu.Root>
+      </UniverseProvider>,
+      { wrapper }
+    );
+
+    it('TINYMCE-14505: Should match snapshot for an inactive toggle item', () => {
+      const { asFragment } = renderItems(
+        <Menu.ToggleItem active={false} onAction={vi.fn()}>Inactive</Menu.ToggleItem>
+      );
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Inactive toggle item');
+    });
+
+    it('TINYMCE-14505: Should match snapshot for an active toggle item', () => {
+      const { asFragment } = renderItems(
+        <Menu.ToggleItem active onAction={vi.fn()}>Active</Menu.ToggleItem>
+      );
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Active toggle item');
+    });
+
+    it('TINYMCE-14505: Should match snapshot for a disabled toggle item with an icon and a shortcut', () => {
+      const { asFragment } = renderItems(
+        <Menu.ToggleItem enabled={false} icon="checkmark" shortcut="Ctrl+I" onAction={vi.fn()}>Disabled</Menu.ToggleItem>
+      );
+      expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('Disabled toggle item with icon and shortcut');
+    });
   });
 });

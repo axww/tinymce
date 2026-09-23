@@ -1,12 +1,15 @@
 /* eslint-disable max-len */
+import { Fun } from '@ephox/katamari';
 import type { ToggleMenuItemInstanceApi } from 'oxide-components/components/menu/internals/Types';
 import * as Menu from 'oxide-components/components/menu/Menu';
 import * as MenuRenderer from 'oxide-components/components/menu/MenuRenderer';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import * as Bem from 'oxide-components/utils/Bem';
 import { describe, expect, it, vi } from 'vitest';
 import { type Locator, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+
+import * as SnapshotTestUtils from './utils/SnapshotTestUtils';
 
 const iconResolver = (icon: string): string => {
   const icons = new Map<string, string>([
@@ -36,6 +39,7 @@ const iconResolver = (icon: string): string => {
 
 const mockUniverse = {
   getIcon: iconResolver,
+  translate: Fun.identity,
 };
 
 const waitForElementText = async (getByText: (text: string) => Locator, text: string) => {
@@ -44,24 +48,6 @@ const waitForElementText = async (getByText: (text: string) => Locator, text: st
 
 const pAssertActiveElementText = async (text: string) => {
   await expect.poll(() => document.activeElement?.textContent).toBe(text);
-};
-
-// Reset positioning styles before matching the snapshot.
-// Anchor names are unique for each component instance.
-const resetPostioningStyles = (fragment: DocumentFragment): DocumentFragment => {
-  fragment.querySelectorAll('.tox-dropdown-content').forEach((dropdownContent) => {
-    const styles = (dropdownContent as HTMLElement).style;
-    if (styles.positionAnchor) {
-      styles.positionAnchor = '--test-anchor';
-    }
-  });
-  fragment.querySelectorAll('[role="menuitem"]').forEach((menuItem) => {
-    const styles = (menuItem as HTMLElement).style;
-    if (styles.anchorName) {
-      styles.anchorName = '--test-anchor';
-    }
-  });
-  return fragment;
 };
 
 describe('browser.MenuTest', () => {
@@ -120,11 +106,11 @@ describe('browser.MenuTest', () => {
     const { asFragment, getByText } = render(<TestComponent />, { wrapper });
 
     await waitForElementText(getByText, 'Menu item 1');
-    expect(resetPostioningStyles(asFragment())).toMatchSnapshot('1. Before open submenu');
+    expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('1. Before open submenu');
 
     await userEvent.hover(getByText('Submenu'));
     await waitForElementText(getByText, 'Nested menu item 1');
-    expect(resetPostioningStyles(asFragment())).toMatchSnapshot('2. After opening submenu');
+    expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('2. After opening submenu');
   });
 
   it('Should be able to render using MenuRenderer', async () => {
@@ -178,11 +164,11 @@ describe('browser.MenuTest', () => {
 
     await waitForElementText(getByText, 'Menu item 1');
 
-    expect(resetPostioningStyles(asFragment())).toMatchSnapshot('1. Before open submenu');
+    expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('1. Before open submenu');
 
     await userEvent.hover(getByText('Submenu'));
     await waitForElementText(getByText, 'Nested menu item 1');
-    expect(resetPostioningStyles(asFragment())).toMatchSnapshot('2. After opening submenu');
+    expect(SnapshotTestUtils.normalize(asFragment())).toMatchSnapshot('2. After opening submenu');
   });
 
   describe('Keyboard Navigation', () => {

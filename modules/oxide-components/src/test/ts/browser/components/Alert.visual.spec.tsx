@@ -1,7 +1,7 @@
 import { Fun } from '@ephox/katamari';
 import { Alert, type AlertProps } from 'oxide-components/components/alert/Alert';
 import { Button } from 'oxide-components/components/button/Button';
-import { UniverseProvider } from 'oxide-components/contexts/UniverseContext/UniverseProvider';
+import { UniverseProvider } from 'oxide-components/contexts/universecontext/UniverseProvider';
 import { describe, it } from 'vitest';
 
 import { renderVisual } from './utils/VisualTestUtils';
@@ -12,6 +12,7 @@ const closeIcon = `<svg width="24" height="24">
 
 const resources = {
   getIcon: Fun.constant(closeIcon),
+  translate: Fun.identity,
 };
 
 const message = 'The change is not supported by the editor and can\'t be previewed or applied.';
