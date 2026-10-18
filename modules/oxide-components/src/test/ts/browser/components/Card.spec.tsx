@@ -1,7 +1,8 @@
-import { Fun } from '@ephox/katamari';
+import { Fun, Optional } from '@ephox/katamari';
 import * as Card from 'oxide-components/components/card/Card';
-import { Button, ExpandableBox, UniverseProvider } from 'oxide-components/Main';
+import { AutoResizingTextarea, Button, ExpandableBox, UniverseProvider } from 'oxide-components/Main';
 import * as Bem from 'oxide-components/utils/Bem';
+import { createRef, useState, type FC } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -67,6 +68,20 @@ describe('browser.components.CardTest', () => {
       expect(card?.className).toContain('custom-class');
     });
 
+    it('TINYMCE-14607: Should apply id and forward ref to the root element', async () => {
+      const cardRef = createRef<HTMLDivElement>();
+      const { container } = render(
+        <Card.Root id="operation-1-card" ref={cardRef}>
+          <Card.Body>Content</Card.Body>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const card = container.querySelector('.tox-card');
+      expect(card?.id).toBe('operation-1-card');
+      expect(cardRef.current).toBe(card);
+    });
+
     it('TINY-13459: Should render header with title prop', async () => {
       const { getByText } = render(
         <Card.Root>
@@ -93,7 +108,7 @@ describe('browser.components.CardTest', () => {
   });
 
   describe('State Tests', () => {
-    it('TINY-13459: Should apply selected CSS class when card is focused in list', async () => {
+    it('TINYMCE-14903: Should not apply selected CSS class when card is only focused in list', async () => {
       const { container } = render(
         <Card.CardList defaultFocusedIndex={0}>
           <Card.Root index={0}>
@@ -104,12 +119,12 @@ describe('browser.components.CardTest', () => {
       );
 
       const card = container.querySelector('.tox-card');
-      expect(card?.className).toContain('tox-card--selected');
+      expect(card?.className, 'Focused card should not use selected styling').not.toContain('tox-card--selected');
     });
 
-    it('TINY-13459: Should not apply selected CSS class when card is not focused', async () => {
+    it('TINYMCE-14903: Should apply selected CSS class from selectedIndex even when another card is focused', async () => {
       const { container } = render(
-        <Card.CardList defaultFocusedIndex={1}>
+        <Card.CardList defaultFocusedIndex={0} defaultSelectedIndex={1}>
           <Card.Root index={0}>
             <Card.Body>Content</Card.Body>
           </Card.Root>
@@ -120,8 +135,68 @@ describe('browser.components.CardTest', () => {
         { wrapper }
       );
 
+      const cards = container.querySelectorAll('.tox-card');
+      expect(cards[0].className, 'Focused unselected card should not have selected class').not.toContain('tox-card--selected');
+      expect(cards[1].className, 'Selected card should have selected class').toContain('tox-card--selected');
+    });
+
+    it('TINYMCE-14903: Should not apply selected CSS class when an action button is focused without selection', async () => {
+      const TestComponent: FC = () => {
+        const [ focusedIndex, setFocusedIndex ] = useState(-1);
+        return (
+          <Card.CardListController focusedIndex={focusedIndex} onFocusedIndexChange={setFocusedIndex}>
+            <Card.CardList>
+              <Card.Root index={0}>
+                <Card.Body>Content</Card.Body>
+                <Card.Actions>
+                  <Button variant="outlined">Skip</Button>
+                </Card.Actions>
+              </Card.Root>
+            </Card.CardList>
+          </Card.CardListController>
+        );
+      };
+
+      const { container, getByRole } = render(<TestComponent />, { wrapper });
+
+      await userEvent.click(getByRole('button', { name: 'Skip' }));
+
+      expect(
+        container.querySelector('.tox-card')?.className,
+        'Focusing an action button should not apply selected styling'
+      ).not.toContain('tox-card--selected');
+    });
+
+    it('TINYMCE-14607: Should not be selected by default when used outside a CardList', async () => {
+      const { container } = render(
+        <Card.Root>
+          <Card.Body>Content</Card.Body>
+        </Card.Root>,
+        { wrapper }
+      );
+
       const card = container.querySelector('.tox-card');
       expect(card?.className).not.toContain('tox-card--selected');
+      expect(card?.getAttribute('aria-selected')).toBe('false');
+    });
+
+    it('TINYMCE-14607: Should follow the selected prop when used outside a CardList', async () => {
+      const { container, rerender } = render(
+        <Card.Root selected={true}>
+          <Card.Body>Content</Card.Body>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      expect(container.querySelector('.tox-card')?.className).toContain('tox-card--selected');
+
+      rerender(
+        <Card.Root selected={false}>
+          <Card.Body>Content</Card.Body>
+        </Card.Root>
+      );
+
+      expect(container.querySelector('.tox-card')?.className).not.toContain('tox-card--selected');
     });
   });
 
@@ -269,7 +344,7 @@ describe('browser.components.CardTest', () => {
       expect(cards[1].getAttribute('aria-selected')).toBe('false');
     });
 
-    it('TINY-13459: Should apply focused styling to first card by default', async () => {
+    it('TINYMCE-14903: Should not apply selected styling from default focusedIndex', async () => {
       const { container } = render(
         <Card.CardList defaultFocusedIndex={0}>
           <Card.Root index={0}>
@@ -286,12 +361,50 @@ describe('browser.components.CardTest', () => {
       );
 
       const cards = container.querySelectorAll('.tox-card') as NodeListOf<HTMLElement>;
-      expect(cards[0].className).toContain('tox-card--selected');
-      expect(cards[1].className).not.toContain('tox-card--selected');
-      expect(cards[2].className).not.toContain('tox-card--selected');
+      expect(cards[0].className, 'Default focused card should not have selected class').not.toContain('tox-card--selected');
+      expect(cards[1].className, 'Unfocused unselected card should not have selected class').not.toContain('tox-card--selected');
+      expect(cards[2].className, 'Unfocused unselected card should not have selected class').not.toContain('tox-card--selected');
     });
 
-    it('TINY-13459: Should update focused card styling when focusedIndex changes (controlled)', async () => {
+    it('TINYMCE-14903: Should update selected card styling when selectedIndex changes (controlled)', async () => {
+      const onFocusedIndexChange = vi.fn();
+      const { container, rerender } = render(
+        <Card.CardListController focusedIndex={0} selectedIndex={0} onFocusedIndexChange={onFocusedIndexChange}>
+          <Card.CardList>
+            <Card.Root index={0}>
+              <Card.Body>Card 1</Card.Body>
+            </Card.Root>
+            <Card.Root index={1}>
+              <Card.Body>Card 2</Card.Body>
+            </Card.Root>
+          </Card.CardList>
+        </Card.CardListController>,
+        { wrapper }
+      );
+
+      let cards = container.querySelectorAll('.tox-card') as NodeListOf<HTMLElement>;
+      expect(cards[0].className, 'Initially selected card should have selected class').toContain('tox-card--selected');
+      expect(cards[1].className, 'Initially unselected card should not have selected class').not.toContain('tox-card--selected');
+
+      rerender(
+        <Card.CardListController focusedIndex={0} selectedIndex={1} onFocusedIndexChange={onFocusedIndexChange}>
+          <Card.CardList>
+            <Card.Root index={0}>
+              <Card.Body>Card 1</Card.Body>
+            </Card.Root>
+            <Card.Root index={1}>
+              <Card.Body>Card 2</Card.Body>
+            </Card.Root>
+          </Card.CardList>
+        </Card.CardListController>
+      );
+
+      cards = container.querySelectorAll('.tox-card') as NodeListOf<HTMLElement>;
+      expect(cards[0].className, 'Previously selected card should lose selected class').not.toContain('tox-card--selected');
+      expect(cards[1].className, 'Newly selected card should have selected class').toContain('tox-card--selected');
+    });
+
+    it('TINYMCE-14903: Should not apply selected styling when only focusedIndex changes (controlled)', async () => {
       const onFocusedIndexChange = vi.fn();
       const { container, rerender } = render(
         <Card.CardListController focusedIndex={0} onFocusedIndexChange={onFocusedIndexChange}>
@@ -308,8 +421,8 @@ describe('browser.components.CardTest', () => {
       );
 
       let cards = container.querySelectorAll('.tox-card') as NodeListOf<HTMLElement>;
-      expect(cards[0].className).toContain('tox-card--selected');
-      expect(cards[1].className).not.toContain('tox-card--selected');
+      expect(cards[0].className, 'Focused card should not have selected class without selectedIndex').not.toContain('tox-card--selected');
+      expect(cards[1].className, 'Unfocused unselected card should not have selected class').not.toContain('tox-card--selected');
 
       rerender(
         <Card.CardListController focusedIndex={1} onFocusedIndexChange={onFocusedIndexChange}>
@@ -325,8 +438,8 @@ describe('browser.components.CardTest', () => {
       );
 
       cards = container.querySelectorAll('.tox-card') as NodeListOf<HTMLElement>;
-      expect(cards[0].className).not.toContain('tox-card--selected');
-      expect(cards[1].className).toContain('tox-card--selected');
+      expect(cards[0].className, 'Previously focused card should not have selected class').not.toContain('tox-card--selected');
+      expect(cards[1].className, 'Newly focused card should not have selected class').not.toContain('tox-card--selected');
     });
   });
 
@@ -394,6 +507,29 @@ describe('browser.components.CardTest', () => {
       secondCard.focus();
       await userEvent.keyboard('{Enter}');
       expect(onSelectCard).toHaveBeenCalledWith(1);
+    });
+
+    it('TINYMCE-14844: Should use the execute override instead of clicking the focused card on Enter', async () => {
+      const onSelectCard = vi.fn();
+      const execute = vi.fn(() => Optional.some(true));
+      const { container } = render(
+        <Card.CardList defaultFocusedIndex={1} onSelectCard={onSelectCard} execute={execute}>
+          <Card.Root index={0}>
+            <Card.Body>Card 1</Card.Body>
+          </Card.Root>
+          <Card.Root index={1}>
+            <Card.Body>Card 2</Card.Body>
+          </Card.Root>
+        </Card.CardList>,
+        { wrapper }
+      );
+
+      const secondCard = container.querySelectorAll<HTMLElement>('.tox-card')[1];
+      secondCard.focus();
+      await userEvent.keyboard('{Enter}');
+      expect(execute, 'execute override should be called once on Enter').toHaveBeenCalledTimes(1);
+      expect(execute, 'execute override should receive the focused card').toHaveBeenCalledWith(expect.objectContaining({ dom: secondCard }));
+      expect(onSelectCard, 'focused card should not be clicked when execute is overridden').not.toHaveBeenCalled();
     });
 
     it('TINY-13459: Should allow buttons inside card to respond to Space key', async () => {
@@ -584,6 +720,36 @@ describe('browser.components.CardTest', () => {
     });
   });
 
+  describe('Divider Tests', () => {
+    it('TINYMCE-14723: Should render divider with correct class', async () => {
+      const { container } = render(
+        <Card.Root>
+          <Card.Body>Content above</Card.Body>
+          <Card.Divider />
+          <Card.Body>Content below</Card.Body>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const divider = container.querySelector('.tox-card__divider');
+      expect(divider, 'Divider should render with correct class').toBeTruthy();
+      expect(divider?.tagName, 'Divider should be an hr element').toBe('HR');
+    });
+
+    it('TINYMCE-14723: Should support custom className', async () => {
+      const { container } = render(
+        <Card.Root>
+          <Card.Body>Content</Card.Body>
+          <Card.Divider className="custom-divider" />
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const divider = container.querySelector('.tox-card__divider');
+      expect(divider?.className, 'Divider should include custom className').toContain('custom-divider');
+    });
+  });
+
   describe('Snapshot Tests', () => {
     it('TINY-13459: Should match snapshot for focused card in list', async () => {
       const { asFragment } = render(
@@ -726,6 +892,865 @@ describe('browser.components.CardTest', () => {
       const actions = container.querySelector('.tox-card__actions');
       expect(body).toBeTruthy();
       expect(actions).toBeTruthy();
+    });
+  });
+
+  describe('Header Tests', () => {
+    it('TINYMCE-14722: Should render Card.HeaderContent', async () => {
+      const { getByText, container } = render(
+        <Card.Root>
+          <Card.Header>
+            <Card.HeaderContent>
+              <span>Left content</span>
+            </Card.HeaderContent>
+          </Card.Header>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      expect(getByText('Left content').element(), 'HeaderContent children should render').toBeTruthy();
+      expect(
+        container.querySelector(Bem.elementSelector('tox-card', 'header-content')),
+        'HeaderContent should use tox-card__header-content class'
+      ).toBeTruthy();
+    });
+
+    it('TINYMCE-14722: Should render Card.HeaderActions', async () => {
+      const { getByText, container } = render(
+        <Card.Root>
+          <Card.Header>
+            <Card.HeaderActions>
+              <button>Action</button>
+            </Card.HeaderActions>
+          </Card.Header>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      expect(getByText('Action').element(), 'HeaderActions children should render').toBeTruthy();
+      expect(
+        container.querySelector(Bem.elementSelector('tox-card', 'header-actions')),
+        'HeaderActions should use tox-card__header-actions class'
+      ).toBeTruthy();
+    });
+
+    it('TINYMCE-14722: Should render both HeaderContent and HeaderActions', async () => {
+      const { getByText } = render(
+        <Card.Root>
+          <Card.Header>
+            <Card.HeaderContent>
+              <span>Content</span>
+            </Card.HeaderContent>
+            <Card.HeaderActions>
+              <button>Action</button>
+            </Card.HeaderActions>
+          </Card.Header>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      expect(getByText('Content').element(), 'HeaderContent should render alongside HeaderActions').toBeTruthy();
+      expect(getByText('Action').element(), 'HeaderActions should render alongside HeaderContent').toBeTruthy();
+    });
+
+    it('TINYMCE-14722: Should apply hover-visible class by default', async () => {
+      const { container } = render(
+        <Card.Root>
+          <Card.Header>
+            <Card.HeaderActions>
+              <button>Action</button>
+            </Card.HeaderActions>
+          </Card.Header>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const headerActions = container.querySelector(Bem.elementSelector('tox-card', 'header-actions'));
+      expect(
+        headerActions?.className,
+        'Default visibilityMode should apply hover-visible modifier'
+      ).toContain('tox-card__header-actions--hover-visible');
+    });
+
+    it('TINYMCE-14722: Should apply always-visible class when visibilityMode is always', async () => {
+      const { container } = render(
+        <Card.Root>
+          <Card.Header>
+            <Card.HeaderActions visibilityMode="always">
+              <button>Action</button>
+            </Card.HeaderActions>
+          </Card.Header>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const headerActions = container.querySelector(Bem.elementSelector('tox-card', 'header-actions'));
+      expect(
+        headerActions?.className,
+        'visibilityMode always should apply always-visible modifier'
+      ).toContain('tox-card__header-actions--always-visible');
+    });
+
+    it('TINYMCE-14722: Should apply on-focus class when visibilityMode is focus', async () => {
+      const { container } = render(
+        <Card.Root>
+          <Card.Header>
+            <Card.HeaderActions visibilityMode="focus">
+              <button>Action</button>
+            </Card.HeaderActions>
+          </Card.Header>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const headerActions = container.querySelector(Bem.elementSelector('tox-card', 'header-actions'));
+      expect(
+        headerActions?.className,
+        'visibilityMode focus should apply on-focus modifier'
+      ).toContain('tox-card__header-actions--on-focus');
+    });
+
+    it('TINYMCE-14722: Should apply hover-visible class to HeaderActions', () => {
+      const { container } = render(
+        <Card.Root selected={true}>
+          <Card.Header>
+            <Card.HeaderContent>
+              <span>Content</span>
+            </Card.HeaderContent>
+            <Card.HeaderActions visibilityMode="hover">
+              <button>Action</button>
+            </Card.HeaderActions>
+          </Card.Header>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const headerActions = container.querySelector(Bem.elementSelector('tox-card', 'header-actions')) as HTMLElement;
+
+      expect(headerActions, 'HeaderActions element should exist').toBeTruthy();
+      expect(headerActions.className, 'HeaderActions should have hover-visible modifier class').toContain('tox-card__header-actions--hover-visible');
+      expect(headerActions.querySelector('button'), 'HeaderActions button child should render').toBeTruthy();
+    });
+
+    it('TINYMCE-14722: Should render HeaderActions without HeaderContent', () => {
+      const { container } = render(
+        <Card.Root selected={true}>
+          <Card.Header>
+            <Card.HeaderActions visibilityMode="always">
+              <button>Action</button>
+            </Card.HeaderActions>
+          </Card.Header>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const header = container.querySelector(Bem.elementSelector('tox-card', 'header')) as HTMLElement;
+      const headerActions = container.querySelector(Bem.elementSelector('tox-card', 'header-actions')) as HTMLElement;
+      const headerContent = container.querySelector(Bem.elementSelector('tox-card', 'header-content'));
+
+      expect(header, 'Header element should exist').toBeTruthy();
+      expect(headerActions, 'HeaderActions element should exist').toBeTruthy();
+      expect(headerContent, 'HeaderContent should not exist').toBeFalsy();
+      expect(headerActions.querySelector('button'), 'HeaderActions button child should render').toBeTruthy();
+    });
+  });
+
+  describe('Expansion Tests', () => {
+    it('TINYMCE-14723: Should render Expansion with collapsed content by default', async () => {
+      const { container, getByRole } = render(
+        <Card.Root>
+          <Card.Body>Body</Card.Body>
+          <Card.Expansion open={false} onOpenChange={Fun.noop}>
+            <Card.ExpansionTrigger>
+              <button type="button">Provide feedback</button>
+            </Card.ExpansionTrigger>
+            <Card.ExpansionContent>
+              <span>Feedback editor</span>
+            </Card.ExpansionContent>
+          </Card.Expansion>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const expansion = container.querySelector(Bem.elementSelector('tox-card', 'expansion'));
+      const content = container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'));
+      const trigger = getByRole('button', { name: 'Provide feedback' });
+
+      expect(expansion, 'Expansion root should render').toBeTruthy();
+      expect(content, 'Expansion content should render').toBeTruthy();
+      expect(
+        content?.className,
+        'Content should have collapsed modifier by default'
+      ).toContain('tox-card__expansion-content--collapsed');
+      expect(trigger.element().getAttribute('aria-expanded'), 'Trigger should be collapsed').toBe('false');
+      expect(content?.getAttribute('aria-hidden'), 'Content should be aria-hidden when collapsed').toBe('true');
+    });
+
+    it('TINYMCE-14723: Should expand content when trigger is clicked', async () => {
+      const TestComponent: FC = () => {
+        const [ open, setOpen ] = useState(false);
+        return (
+          <Card.Root>
+            <Card.Expansion open={open} onOpenChange={setOpen}>
+              <Card.ExpansionTrigger>
+                <button type="button">Provide feedback</button>
+              </Card.ExpansionTrigger>
+              <Card.ExpansionContent>
+                <span>Feedback editor</span>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { container, getByRole } = render(<TestComponent />, { wrapper });
+
+      const trigger = getByRole('button', { name: 'Provide feedback' });
+      await userEvent.click(trigger);
+
+      const content = container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'));
+      expect(trigger.element().getAttribute('aria-expanded'), 'Trigger should be expanded after click').toBe('true');
+      expect(
+        content?.className,
+        'Content should have expanded modifier after click'
+      ).toContain('tox-card__expansion-content--expanded');
+      expect(content?.getAttribute('aria-hidden'), 'Content should not be aria-hidden when expanded').toBe('false');
+    });
+
+    it('TINYMCE-14723: Should toggle expansion with Enter key', async () => {
+      const TestComponent: FC = () => {
+        const [ open, setOpen ] = useState(false);
+        return (
+          <Card.Root>
+            <Card.Expansion open={open} onOpenChange={setOpen}>
+              <Card.ExpansionTrigger>
+                <button type="button">Add comment...</button>
+              </Card.ExpansionTrigger>
+              <Card.ExpansionContent>
+                <span>Reply editor</span>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { container, getByRole } = render(<TestComponent />, { wrapper });
+
+      const trigger = getByRole('button', { name: 'Add comment...' });
+      trigger.element().focus();
+      await userEvent.keyboard('{Enter}');
+
+      const content = container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'));
+      expect(trigger.element().getAttribute('aria-expanded'), 'Enter should expand the trigger').toBe('true');
+      expect(
+        content?.className,
+        'Enter should apply expanded content class'
+      ).toContain('tox-card__expansion-content--expanded');
+    });
+
+    it('TINYMCE-14723: Should support controlled open state', async () => {
+      const onOpenChange = vi.fn();
+      const { container, rerender, getByRole } = render(
+        <Card.Root>
+          <Card.Expansion open={false} onOpenChange={onOpenChange}>
+            <Card.ExpansionTrigger>
+              <button type="button">2 replies</button>
+            </Card.ExpansionTrigger>
+            <Card.ExpansionContent>
+              <span>Nested replies</span>
+            </Card.ExpansionContent>
+          </Card.Expansion>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      let content = container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'));
+      expect(content?.className, 'Controlled closed should be collapsed').toContain('tox-card__expansion-content--collapsed');
+
+      await userEvent.click(getByRole('button', { name: '2 replies' }));
+      expect(onOpenChange, 'Controlled mode should notify parent').toHaveBeenCalledWith(true);
+
+      rerender(
+        <Card.Root>
+          <Card.Expansion open={true} onOpenChange={onOpenChange}>
+            <Card.ExpansionTrigger>
+              <button type="button">2 replies</button>
+            </Card.ExpansionTrigger>
+            <Card.ExpansionContent>
+              <span>Nested replies</span>
+            </Card.ExpansionContent>
+          </Card.Expansion>
+        </Card.Root>
+      );
+
+      content = container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'));
+      expect(content?.className, 'Controlled open should be expanded').toContain('tox-card__expansion-content--expanded');
+      expect(
+        getByRole('button', { name: '2 replies' }).element().getAttribute('aria-expanded'),
+        'Controlled open should set aria-expanded'
+      ).toBe('true');
+    });
+
+    it('TINYMCE-14723: Should wire aria-controls between trigger and content', async () => {
+      const { container, getByRole } = render(
+        <Card.Root>
+          <Card.Expansion open={false} onOpenChange={Fun.noop}>
+            <Card.ExpansionTrigger>
+              <button type="button">Provide feedback</button>
+            </Card.ExpansionTrigger>
+            <Card.ExpansionContent>
+              <span>Feedback editor</span>
+            </Card.ExpansionContent>
+          </Card.Expansion>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const trigger = getByRole('button', { name: 'Provide feedback' }).element();
+      const content = container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'));
+      const controlsId = trigger.getAttribute('aria-controls');
+
+      expect(controlsId, 'Trigger should have aria-controls').toBeTruthy();
+      expect(content?.id, 'Content id should match aria-controls').toBe(controlsId);
+      expect(content?.getAttribute('role'), 'Content should have role group').toBe('group');
+    });
+
+    it('TINYMCE-14723: Should support nested Expansion for comment reply composer', async () => {
+      const TestComponent: FC = () => {
+        const [ outerOpen, setOuterOpen ] = useState(true);
+        const [ innerOpen, setInnerOpen ] = useState(false);
+        return (
+          <Card.Root>
+            <Card.Expansion open={outerOpen} onOpenChange={setOuterOpen}>
+              <Card.ExpansionTrigger>
+                <button type="button">2 replies</button>
+              </Card.ExpansionTrigger>
+              <Card.ExpansionContent>
+                <span>Existing reply</span>
+                <Card.Expansion open={innerOpen} onOpenChange={setInnerOpen}>
+                  <Card.ExpansionTrigger>
+                    <button type="button">Add comment...</button>
+                  </Card.ExpansionTrigger>
+                  <Card.ExpansionContent>
+                    <span>Nested reply editor</span>
+                  </Card.ExpansionContent>
+                </Card.Expansion>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { getByRole, getByText } = render(<TestComponent />, { wrapper });
+
+      expect(getByText('Existing reply').element(), 'Outer expansion content should be visible').toBeTruthy();
+
+      const addComment = getByRole('button', { name: 'Add comment...' });
+      expect(addComment.element().getAttribute('aria-expanded'), 'Nested trigger starts collapsed').toBe('false');
+
+      await userEvent.click(addComment);
+      expect(addComment.element().getAttribute('aria-expanded'), 'Nested trigger should expand').toBe('true');
+      expect(getByText('Nested reply editor').element(), 'Nested content should render').toBeTruthy();
+    });
+
+    it('TINYMCE-14723: Should not select card when Expansion trigger is activated', async () => {
+      const onSelect = vi.fn();
+      const { getByRole } = render(
+        <Card.CardList>
+          <Card.Root index={0} onSelect={onSelect}>
+            <Card.Expansion open={false} onOpenChange={Fun.noop}>
+              <Card.ExpansionTrigger>
+                <button type="button">Provide feedback</button>
+              </Card.ExpansionTrigger>
+              <Card.ExpansionContent>
+                <span>Editor</span>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        </Card.CardList>,
+        { wrapper }
+      );
+
+      await userEvent.click(getByRole('button', { name: 'Provide feedback' }));
+      expect(onSelect, 'Card onSelect should not fire when clicking Expansion trigger').not.toHaveBeenCalled();
+    });
+
+    it('TINYMCE-14723: Should toggle expansion with Space key', async () => {
+      const TestComponent: FC = () => {
+        const [ open, setOpen ] = useState(false);
+        return (
+          <Card.Root>
+            <Card.Expansion open={open} onOpenChange={setOpen}>
+              <Card.ExpansionTrigger>
+                <button type="button">Provide feedback</button>
+              </Card.ExpansionTrigger>
+              <Card.ExpansionContent>
+                <span>Feedback editor</span>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { container, getByRole } = render(<TestComponent />, { wrapper });
+
+      const trigger = getByRole('button', { name: 'Provide feedback' });
+      trigger.element().focus();
+      await userEvent.keyboard('{ }');
+
+      const content = container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'));
+      expect(trigger.element().getAttribute('aria-expanded'), 'Space should expand the trigger').toBe('true');
+      expect(
+        content?.className,
+        'Space should apply expanded content class'
+      ).toContain('tox-card__expansion-content--expanded');
+    });
+
+    it('TINYMCE-14723: Provide feedback pattern should reveal textarea for typing', async () => {
+      const FeedbackComposer: FC = () => {
+        const [ open, setOpen ] = useState(false);
+        const [ feedback, setFeedback ] = useState('');
+
+        return (
+          <Card.Root>
+            <Card.Expansion open={open} onOpenChange={setOpen}>
+              {!open && (
+                <Card.ExpansionTrigger>
+                  <button type="button">Provide feedback</button>
+                </Card.ExpansionTrigger>
+              )}
+              <Card.ExpansionContent ariaLabel="Feedback editor">
+                <AutoResizingTextarea
+                  value={feedback}
+                  onChange={setFeedback}
+                  placeholder="Provide feedback..."
+                />
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { getByRole, getByPlaceholder } = render(<FeedbackComposer />, { wrapper });
+
+      await userEvent.click(getByRole('button', { name: 'Provide feedback' }));
+
+      const textarea = getByPlaceholder('Provide feedback...');
+      expect(textarea.element(), 'Textarea should be available after Provide feedback').toBeTruthy();
+
+      await userEvent.type(textarea, 'Test feedback');
+      expect(
+        (textarea.element() as HTMLTextAreaElement).value,
+        'Typed feedback should appear in the textarea'
+      ).toBe('Test feedback');
+    });
+
+    it('TINYMCE-14723: Provide feedback pattern should hide trigger while composer is open', async () => {
+      const FeedbackComposer: FC = () => {
+        const [ open, setOpen ] = useState(false);
+
+        return (
+          <Card.Root>
+            <Card.Expansion open={open} onOpenChange={setOpen}>
+              {!open && (
+                <Card.ExpansionTrigger>
+                  <button type="button">Provide feedback</button>
+                </Card.ExpansionTrigger>
+              )}
+              <Card.ExpansionContent ariaLabel="Feedback editor">
+                <span>Feedback editor</span>
+                <button type="button" onClick={() => setOpen(false)}>Cancel</button>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { getByRole, getByText, container } = render(<FeedbackComposer />, { wrapper });
+
+      await userEvent.click(getByRole('button', { name: 'Provide feedback' }));
+
+      expect(
+        container.querySelector('button[aria-expanded]'),
+        'Provide feedback trigger should be removed while composer is open'
+      ).toBeNull();
+      expect(getByText('Feedback editor').element(), 'Composer content should be visible').toBeTruthy();
+    });
+
+    it('TINYMCE-14723: Cancel should collapse the provide feedback composer', async () => {
+      const FeedbackComposer: FC = () => {
+        const [ open, setOpen ] = useState(false);
+        const [ feedback, setFeedback ] = useState('');
+
+        return (
+          <Card.Root>
+            <Card.Expansion open={open} onOpenChange={setOpen}>
+              {!open && (
+                <Card.ExpansionTrigger>
+                  <button type="button">Provide feedback</button>
+                </Card.ExpansionTrigger>
+              )}
+              <Card.ExpansionContent ariaLabel="Feedback editor">
+                <AutoResizingTextarea
+                  value={feedback}
+                  onChange={setFeedback}
+                  placeholder="Provide feedback..."
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFeedback('');
+                    setOpen(false);
+                  }}
+                >
+                  Cancel
+                </button>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { getByRole, getByPlaceholder, container } = render(<FeedbackComposer />, { wrapper });
+
+      await userEvent.click(getByRole('button', { name: 'Provide feedback' }));
+      await userEvent.type(getByPlaceholder('Provide feedback...'), 'Draft');
+      await userEvent.click(getByRole('button', { name: 'Cancel' }));
+
+      expect(
+        getByRole('button', { name: 'Provide feedback' }).element(),
+        'Provide feedback trigger should return after Cancel'
+      ).toBeTruthy();
+      expect(
+        container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'))?.className,
+        'Composer should be collapsed after Cancel'
+      ).toContain('tox-card__expansion-content--collapsed');
+      expect(
+        container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'))?.getAttribute('aria-hidden'),
+        'Collapsed composer should be aria-hidden'
+      ).toBe('true');
+    });
+
+    it('TINYMCE-14723: Add comment pattern should open reply composer inside expanded replies', async () => {
+      const CommentThread: FC = () => {
+        const [ repliesOpen, setRepliesOpen ] = useState(true);
+        const [ replyOpen, setReplyOpen ] = useState(false);
+        const [ reply, setReply ] = useState('');
+
+        return (
+          <Card.Root>
+            <Card.Expansion open={repliesOpen} onOpenChange={setRepliesOpen}>
+              <Card.ExpansionTrigger>
+                <button type="button">2 replies</button>
+              </Card.ExpansionTrigger>
+              <Card.ExpansionContent>
+                <span>Existing reply</span>
+                <Card.Expansion open={replyOpen} onOpenChange={setReplyOpen}>
+                  {!replyOpen && (
+                    <Card.ExpansionTrigger>
+                      <button type="button">Add comment...</button>
+                    </Card.ExpansionTrigger>
+                  )}
+                  <Card.ExpansionContent ariaLabel="Comment editor">
+                    <AutoResizingTextarea
+                      value={reply}
+                      onChange={setReply}
+                      placeholder="Add comment..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReply('');
+                        setReplyOpen(false);
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </Card.ExpansionContent>
+                </Card.Expansion>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { getByRole, getByPlaceholder, getByText, container } = render(<CommentThread />, { wrapper });
+
+      expect(getByText('Existing reply').element(), 'Replies should be visible when outer expansion is open').toBeTruthy();
+      expect(
+        getByRole('button', { name: 'Add comment...' }).element(),
+        'Add comment trigger should be visible before opening composer'
+      ).toBeTruthy();
+
+      await userEvent.click(getByRole('button', { name: 'Add comment...' }));
+
+      expect(
+        Array.from(container.querySelectorAll('button')).some((button) => button.textContent === 'Add comment...'),
+        'Add comment trigger should be hidden while composer is open'
+      ).toBe(false);
+
+      const textarea = getByPlaceholder('Add comment...');
+      await userEvent.type(textarea, 'My reply');
+      expect(
+        (textarea.element() as HTMLTextAreaElement).value,
+        'Reply text should be typed into the composer'
+      ).toBe('My reply');
+    });
+
+    it('TINYMCE-14723: Cancel on nested comment composer should keep replies expansion open', async () => {
+      const CommentThread: FC = () => {
+        const [ repliesOpen, setRepliesOpen ] = useState(true);
+        const [ replyOpen, setReplyOpen ] = useState(false);
+
+        return (
+          <Card.Root>
+            <Card.Expansion open={repliesOpen} onOpenChange={setRepliesOpen}>
+              <Card.ExpansionTrigger>
+                <button type="button">2 replies</button>
+              </Card.ExpansionTrigger>
+              <Card.ExpansionContent>
+                <span>Existing reply</span>
+                <Card.Expansion open={replyOpen} onOpenChange={setReplyOpen}>
+                  {!replyOpen && (
+                    <Card.ExpansionTrigger>
+                      <button type="button">Add comment...</button>
+                    </Card.ExpansionTrigger>
+                  )}
+                  <Card.ExpansionContent ariaLabel="Comment editor">
+                    <span>Reply editor</span>
+                    <button type="button" onClick={() => setReplyOpen(false)}>Cancel</button>
+                  </Card.ExpansionContent>
+                </Card.Expansion>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { getByRole, getByText, container } = render(<CommentThread />, { wrapper });
+
+      await userEvent.click(getByRole('button', { name: 'Add comment...' }));
+      await userEvent.click(getByRole('button', { name: 'Cancel' }));
+
+      expect(getByText('Existing reply').element(), 'Outer replies content should remain visible after Cancel').toBeTruthy();
+      expect(
+        getByRole('button', { name: 'Add comment...' }).element(),
+        'Add comment trigger should return after Cancel'
+      ).toBeTruthy();
+      expect(
+        getByRole('button', { name: '2 replies' }).element().getAttribute('aria-expanded'),
+        'Outer replies expansion should stay open after Cancel'
+      ).toBe('true');
+
+      const expansionContents = container.querySelectorAll(Bem.elementSelector('tox-card', 'expansion-content'));
+      expect(
+        expansionContents[0]?.className,
+        'Outer expansion content should remain expanded'
+      ).toContain('tox-card__expansion-content--expanded');
+      expect(
+        expansionContents[1]?.className,
+        'Inner composer should be collapsed after Cancel'
+      ).toContain('tox-card__expansion-content--collapsed');
+    });
+
+    it('TINYMCE-14723: Collapsed nested composer should stay aria-hidden while replies are expanded', async () => {
+      const { container, getByRole } = render(
+        <Card.Root>
+          <Card.Expansion open={true} onOpenChange={Fun.noop}>
+            <Card.ExpansionTrigger>
+              <button type="button">2 replies</button>
+            </Card.ExpansionTrigger>
+            <Card.ExpansionContent>
+              <span>Existing reply</span>
+              <Card.Expansion open={false} onOpenChange={Fun.noop}>
+                <Card.ExpansionTrigger>
+                  <button type="button">Add comment...</button>
+                </Card.ExpansionTrigger>
+                <Card.ExpansionContent>
+                  <button type="button">Save reply</button>
+                </Card.ExpansionContent>
+              </Card.Expansion>
+            </Card.ExpansionContent>
+          </Card.Expansion>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const expansionContents = container.querySelectorAll(Bem.elementSelector('tox-card', 'expansion-content'));
+      expect(
+        expansionContents[1]?.getAttribute('aria-hidden'),
+        'Nested composer should be aria-hidden while collapsed'
+      ).toBe('true');
+      expect(
+        expansionContents[1]?.hasAttribute('inert'),
+        'Nested composer should be inert while collapsed so it cannot be interacted with'
+      ).toBe(true);
+      expect(
+        getByRole('button', { name: 'Add comment...' }).element().getAttribute('aria-expanded'),
+        'Add comment trigger should report collapsed'
+      ).toBe('false');
+    });
+
+    it('TINYMCE-14723: Should wire aria-labelledby to real trigger element', async () => {
+      const { container, getByRole } = render(
+        <Card.Root>
+          <Card.Expansion open={false} onOpenChange={Fun.noop}>
+            <Card.ExpansionTrigger>
+              <button type="button">View feedback</button>
+            </Card.ExpansionTrigger>
+            <Card.ExpansionContent>
+              <span>Feedback content</span>
+            </Card.ExpansionContent>
+          </Card.Expansion>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const trigger = getByRole('button', { name: 'View feedback' }).element();
+      const content = container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'));
+      const labelledBy = content?.getAttribute('aria-labelledby');
+
+      expect(labelledBy, 'Content should have aria-labelledby').toBeTruthy();
+      expect(trigger.id, 'Trigger should have id').toBe(labelledBy);
+      expect(document.getElementById(labelledBy as string), 'aria-labelledby should point to real element').toBe(trigger);
+    });
+
+    it('TINYMCE-14723: Should use custom id prop as base for trigger and content ids', async () => {
+      const { container, getByRole } = render(
+        <Card.Root>
+          <Card.Expansion id="custom-expansion" open={false} onOpenChange={Fun.noop}>
+            <Card.ExpansionTrigger>
+              <button type="button">Toggle</button>
+            </Card.ExpansionTrigger>
+            <Card.ExpansionContent>
+              <span>Content</span>
+            </Card.ExpansionContent>
+          </Card.Expansion>
+        </Card.Root>,
+        { wrapper }
+      );
+
+      const trigger = getByRole('button', { name: 'Toggle' }).element();
+      const content = container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'));
+
+      expect(trigger.id, 'Trigger should use custom id as base').toBe('custom-expansion-trigger');
+      expect(content?.id, 'Content should use custom id as base').toBe('custom-expansion-content');
+      expect(trigger.getAttribute('aria-controls'), 'Trigger aria-controls should match content id').toBe('custom-expansion-content');
+      expect(content?.getAttribute('aria-labelledby'), 'Content aria-labelledby should match trigger id').toBe('custom-expansion-trigger');
+    });
+
+    it('TINYMCE-14723: Should throw error for conditional children in ExpansionTrigger', async () => {
+      const ConsoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(Fun.noop);
+
+      expect(() => {
+        render(
+          <Card.Root>
+            <Card.Expansion open={false} onOpenChange={Fun.noop}>
+              <Card.ExpansionTrigger>
+                {false && <button type="button">Hidden</button>}
+              </Card.ExpansionTrigger>
+              <Card.ExpansionContent>
+                <span>Content</span>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>,
+          { wrapper }
+        );
+      }, 'Should throw when conditional child is filtered out').toThrow('Card.ExpansionTrigger requires exactly one valid React element child');
+
+      ConsoleErrorSpy.mockRestore();
+    });
+
+    it('TINYMCE-14723: Should work with Button component as trigger child', async () => {
+      const TestComponent: FC = () => {
+        const [ open, setOpen ] = useState(false);
+        return (
+          <Card.Root>
+            <Card.Expansion open={open} onOpenChange={setOpen}>
+              <Card.ExpansionTrigger>
+                <Button variant="outlined" className="tox-button--stretch">
+                  View replies (3)
+                </Button>
+              </Card.ExpansionTrigger>
+              <Card.ExpansionContent>
+                <span>Reply content</span>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { container, getByRole } = render(<TestComponent />, { wrapper });
+
+      const button = getByRole('button', { name: 'View replies (3)' });
+      expect(button.element().getAttribute('aria-expanded'), 'Button should have aria-expanded').toBe('false');
+      expect(button.element().getAttribute('aria-controls'), 'Button should have aria-controls').toBeTruthy();
+
+      await userEvent.click(button);
+
+      expect(button.element().getAttribute('aria-expanded'), 'Button should be expanded after click').toBe('true');
+      const content = container.querySelector(Bem.elementSelector('tox-card', 'expansion-content'));
+      expect(content?.className, 'Content should be expanded').toContain('tox-card__expansion-content--expanded');
+    });
+
+    it('TINYMCE-14723: Focus should move when trigger is conditionally unmounted after expansion', async () => {
+      const TestComponent: FC = () => {
+        const [ open, setOpen ] = useState(false);
+        return (
+          <Card.Root>
+            <Card.Expansion open={open} onOpenChange={setOpen}>
+              {!open && (
+                <Card.ExpansionTrigger>
+                  <button type="button">Expand</button>
+                </Card.ExpansionTrigger>
+              )}
+              <Card.ExpansionContent ariaLabel="Expanded content">
+                <button type="button" id="inside-button">Inside</button>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { getByRole } = render(<TestComponent />, { wrapper });
+
+      const trigger = getByRole('button', { name: 'Expand' });
+      trigger.element().focus();
+      expect(document.activeElement, 'Trigger should be focused before click').toBe(trigger.element());
+
+      await userEvent.click(trigger);
+
+      expect(document.activeElement?.tagName, 'Focus should move to body when trigger unmounts').toBe('BODY');
+    });
+
+    it('TINYMCE-14723: Focus should return to trigger when content with focused element collapses', async () => {
+      const TestComponent: FC = () => {
+        const [ open, setOpen ] = useState(true);
+        return (
+          <Card.Root>
+            <Card.Expansion open={open} onOpenChange={setOpen}>
+              <Card.ExpansionTrigger>
+                <button type="button">Toggle</button>
+              </Card.ExpansionTrigger>
+              <Card.ExpansionContent>
+                <button type="button" id="cancel-btn" onClick={() => setOpen(false)}>Cancel</button>
+              </Card.ExpansionContent>
+            </Card.Expansion>
+          </Card.Root>
+        );
+      };
+
+      const { getByRole } = render(<TestComponent />, { wrapper });
+
+      const cancelButton = getByRole('button', { name: 'Cancel' });
+      const trigger = getByRole('button', { name: 'Toggle' });
+
+      cancelButton.element().focus();
+      expect(document.activeElement, 'Cancel button should be focused').toBe(cancelButton.element());
+
+      await userEvent.click(cancelButton);
+
+      expect(document.activeElement, 'Focus should return to trigger when content collapses').toBe(trigger.element());
     });
   });
 

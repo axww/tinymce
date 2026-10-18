@@ -26,7 +26,7 @@
     display: flex;
     flex-direction: column;
     gap: @card-section-gap;
-    padding: @card-section-padding;
+    padding: @card-section-padding - @card-selected-border-width;
     cursor: pointer;
     transition: box-shadow 0.15s ease-in-out, border 0.15s ease-in-out;
     border: @card-selected-border-width solid transparent;
@@ -40,8 +40,7 @@
     }
 
     &:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 @keyboard-focus-outline-width @keyboard-focus-outline-color;
+      outline: @keyboard-focus-outline-width solid @keyboard-focus-outline-color;
       border-color: transparent;
     }
 
@@ -51,6 +50,7 @@
       &:not(.tox-card--selected) {
         border-width: 1px;
         border-color: @text-color-muted;
+        padding: @card-section-padding - 1px;
       }
 
       .tox-card__header {
@@ -97,11 +97,60 @@
         text-transform: uppercase;
         color: @card-text-color;
       }
+
+      &-content {
+        flex: 1;
+        min-width: 0;
+        font-weight: normal;
+        text-transform: none;
+      }
+
+      &-actions {
+        display: flex;
+        align-items: center;
+        gap: @pad-xs;
+        flex-shrink: 0;
+        opacity: 1;
+        pointer-events: auto;
+        transition: opacity 0.15s ease-in-out;
+
+        &--hover-visible,
+        &--on-focus {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        &--always-visible {
+          opacity: 1;
+          pointer-events: auto;
+        }
+      }
+    }
+
+    &__header:has(.tox-card__header-content),
+    &__header:has(.tox-card__header-actions) {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    &__header:has(.tox-card__header-content) {
+      justify-content: space-between;
+    }
+
+    &__header:has(.tox-card__header-actions):not(:has(.tox-card__header-content)) {
+      justify-content: flex-end;
+    }
+
+    &:hover .tox-card__header-actions--hover-visible,
+    &:focus-within .tox-card__header-actions--hover-visible,
+    &:focus-within .tox-card__header-actions--on-focus {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     &__body {
       color: @card-text-color;
-      font-size: @font-size-md;
+      font-size: @font-size-sm;
 
       .tox-expandable-box {
         border: none;
@@ -144,6 +193,53 @@
       .tox-button:has(.tox-icon:only-child) {
         padding: @pad-xs @pad-md;
       }
+    }
+
+    &__divider {
+      margin: @card-section-gap 0;
+      border: none;
+      border-top: 1px solid @border-color;
+    }
+
+    &__expansion {
+      display: flex;
+      flex-direction: column;
+      gap: @card-section-gap;
+      width: 100%;
+
+      &:has(> .tox-card__expansion-content--collapsed:only-child) {
+        margin-block-start: -@card-section-gap;
+      }
+    }
+
+    &__expansion-content {
+      display: grid;
+      font-size: @font-size-sm;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.2s ease-in-out;
+
+      &--expanded {
+        grid-template-rows: 1fr;
+
+        // Direct child only — nested expansions must keep overflow:hidden when collapsed,
+        // otherwise their content spills out under the trigger.
+        > .tox-card__expansion-content-inner {
+          min-height: auto;
+          overflow: visible;
+        }
+      }
+
+      &--collapsed {
+        grid-template-rows: 0fr;
+      }
+    }
+
+    &__expansion-content-inner {
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: @card-section-gap;
     }
 
     &.tox-skeleton {

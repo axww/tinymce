@@ -1,12 +1,13 @@
 import { Arr, Type } from '@ephox/katamari';
-import { useCallback, type FC, type PropsWithChildren } from 'react';
+import { Children, cloneElement, createContext, forwardRef, isValidElement, useCallback, useContext, useId, useLayoutEffect, useMemo, useRef, type FC, type MouseEvent as ReactMouseEvent, type PropsWithChildren, type ReactElement } from 'react';
 
 import * as Bem from '../../utils/Bem';
 
 import { useCardListContext } from './CardListContext';
-import type { CardHighlightType, CardLayout } from './CardTypes';
+import type { CardHeaderActionsVisibility, CardHighlightType, CardLayout } from './CardTypes';
 
 export interface CardRootProps extends PropsWithChildren {
+  readonly id?: string;
   readonly className?: string;
   readonly onSelect?: () => void;
   readonly selected?: boolean;
@@ -28,6 +29,15 @@ export interface CardHeaderProps extends PropsWithChildren {
   readonly title?: string;
 }
 
+export interface CardHeaderContentProps extends PropsWithChildren {}
+
+export interface CardHeaderActionsProps extends PropsWithChildren {
+  /**
+   * Controls when header actions are revealed. Defaults to hover (also revealed on focus-within).
+   */
+  readonly visibilityMode?: CardHeaderActionsVisibility;
+}
+
 export interface CardBodyProps extends PropsWithChildren {}
 
 export interface CardActionsProps extends PropsWithChildren {
@@ -38,13 +48,55 @@ export interface CardHighlightProps extends PropsWithChildren {
   readonly type: CardHighlightType;
 }
 
+export interface CardDividerProps {
+  readonly className?: string;
+}
+
+export interface CardExpansionProps extends PropsWithChildren {
+  /**
+   * Optional unique base identifier for this expansion (must be unique per page).
+   * Used to generate DOM ids for the trigger and content elements (e.g. `${id}-trigger`, `${id}-content`).
+   * Useful when multiple expansions exist in a list and parent needs stable identification.
+   */
+  readonly id?: string;
+  readonly open: boolean;
+  /**
+   * Called by `ExpansionTrigger`. Optional, so an expansion whose open state is derived
+   * entirely from the parent (no trigger rendered) does not need a no-op callback.
+   */
+  readonly onOpenChange?: (open: boolean) => void;
+  readonly className?: string;
+}
+
+export interface CardExpansionTriggerProps extends PropsWithChildren {
+  readonly className?: string;
+}
+
+export interface CardExpansionContentProps extends PropsWithChildren {
+  readonly className?: string;
+  /**
+   * Accessible label for the content region.
+   * Required when the trigger is conditionally rendered (e.g. hidden when expanded),
+   * otherwise aria-labelledby will point to a non-existent element.
+   */
+  readonly ariaLabel?: string;
+}
+
+interface CardExpansionContextValue {
+  readonly open: boolean;
+  readonly toggle: () => void;
+  readonly contentId: string;
+  readonly triggerId: string;
+}
+
 const renderSkeletonLines = (lines: number) =>
   Arr.range(lines, (i) => (
     <div key={i} className={Bem.element('tox-skeleton', 'line')} style={{ width: '100%' }} />
   ));
 
-const Root: FC<CardRootProps> = ({
+const Root = forwardRef<HTMLDivElement, CardRootProps>(({
   children,
+  id,
   className,
   onSelect,
   selected = false,
@@ -52,11 +104,13 @@ const Root: FC<CardRootProps> = ({
   hasDecision = false,
   index,
   loading = false
-}) => {
+}, ref) => {
   const listContext = useCardListContext();
 
-  const isFocused = listContext?.focusedIndex === index;
-  const isSelected = listContext?.selectedIndex === index;
+  // Without both a list context and an index the comparison below is `undefined === undefined`,
+  // which would mark every standalone card as selected.
+  const inList = Type.isNonNullable(listContext) && Type.isNonNullable(index);
+  const isSelected = inList && listContext?.selectedIndex === index;
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -101,7 +155,7 @@ const Root: FC<CardRootProps> = ({
   }, [ listContext, index ]);
 
   const cardClassName = Bem.block('tox-card', {
-    'selected': !loading && (isFocused || selected),
+    'selected': !loading && (isSelected || selected),
     'has-decision': hasDecision
   })
     + (loading ? ' tox-skeleton' : '')
@@ -120,6 +174,8 @@ const Root: FC<CardRootProps> = ({
 
   return (
     <div
+      ref={ref}
+      id={id}
       className={cardClassName}
       onClick={loading ? undefined : handleClick}
       onKeyDown={loading ? undefined : handleKeyDown}
@@ -127,18 +183,40 @@ const Root: FC<CardRootProps> = ({
       tabIndex={loading ? undefined : -1}
       role="option"
       aria-label={ariaLabel ?? `Card ${(index ?? 0) + 1}`}
-      aria-selected={isSelected}
+      aria-selected={isSelected || selected}
       aria-busy={loading}
     >
       {loading ? skeletonContent : children}
     </div>
   );
-};
+});
+
+Root.displayName = 'Card.Root';
 
 const Header: FC<CardHeaderProps> = ({ children, title }) => {
   return (
     <div className={Bem.element('tox-card', 'header')}>
       {Type.isNonNullable(title) ? title : children}
+    </div>
+  );
+};
+
+const HeaderContent: FC<CardHeaderContentProps> = ({ children }) => {
+  return (
+    <div className={Bem.element('tox-card', 'header-content')}>
+      {children}
+    </div>
+  );
+};
+
+const HeaderActions: FC<CardHeaderActionsProps> = ({ children, visibilityMode = 'hover' }) => {
+  return (
+    <div className={Bem.element('tox-card', 'header-actions', {
+      'always-visible': visibilityMode === 'always',
+      'hover-visible': visibilityMode === 'hover',
+      'on-focus': visibilityMode === 'focus'
+    })}>
+      {children}
     </div>
   );
 };
@@ -174,13 +252,187 @@ const Highlight: FC<CardHighlightProps> = ({ children, type }) => {
   );
 };
 
+const Divider: FC<CardDividerProps> = ({ className }) => {
+  const dividerClassName = Bem.element('tox-card', 'divider')
+    + (Type.isNonNullable(className) ? ` ${className}` : '');
+
+  return <hr className={dividerClassName} />;
+};
+
+const CardExpansionContext = createContext<CardExpansionContextValue | null>(null);
+
+const useCardExpansion = (): CardExpansionContextValue => {
+  const context = useContext(CardExpansionContext);
+  if (context === null) {
+    throw new Error('Card Expansion components must be used within Card.Expansion');
+  }
+  return context;
+};
+
+const Expansion: FC<CardExpansionProps> = ({
+  children,
+  id,
+  open,
+  onOpenChange,
+  className
+}) => {
+  const reactId = useId();
+  const baseId = id ?? reactId;
+
+  const toggle = useCallback(() => {
+    onOpenChange?.(!open);
+  }, [ open, onOpenChange ]);
+
+  const contextValue = useMemo<CardExpansionContextValue>(() => ({
+    open,
+    toggle,
+    contentId: `${baseId}-content`,
+    triggerId: `${baseId}-trigger`
+  }), [ open, toggle, baseId ]);
+
+  const expansionClassName = Bem.element('tox-card', 'expansion')
+    + (Type.isNonNullable(className) ? ` ${className}` : '');
+
+  return (
+    <CardExpansionContext.Provider value={contextValue}>
+      <div className={expansionClassName}>
+        {children}
+      </div>
+    </CardExpansionContext.Provider>
+  );
+};
+
+/**
+ * Trigger that toggles the expansion. Requires a single interactive child element.
+ *
+ * Enter and Space toggle via native button click behavior.
+ *
+ * Note: Conditionally rendering the trigger (e.g. {!open && <ExpansionTrigger>...})
+ * will throw an error. If the trigger should be hidden, use CSS visibility or
+ * provide an ariaLabel prop to ExpansionContent.
+ */
+const ExpansionTrigger: FC<CardExpansionTriggerProps> = ({ children, className }) => {
+  const { open, toggle, contentId, triggerId } = useCardExpansion();
+
+  const handleClick = useCallback((e: ReactMouseEvent) => {
+    e.stopPropagation();
+    toggle();
+  }, [ toggle ]);
+
+  const childArray = Children.toArray(children);
+  const singleChild = childArray.length === 1 ? childArray[0] : null;
+
+  if (!isValidElement(singleChild)) {
+    throw new Error(
+      'Card.ExpansionTrigger requires exactly one valid React element child. ' +
+      'Conditional rendering (e.g., {condition && <button>}) is not supported. ' +
+      'Use CSS to hide the trigger or provide ariaLabel to ExpansionContent instead.'
+    );
+  }
+
+  const child = singleChild as ReactElement<{
+    'onClick'?: (e: ReactMouseEvent) => void;
+    'className'?: string;
+    'id'?: string;
+    'aria-expanded'?: boolean;
+    'aria-controls'?: string;
+  }>;
+
+  let mergedClassName = child.props.className;
+  if (Type.isNonNullable(className)) {
+    if (Type.isNonNullable(mergedClassName)) {
+      mergedClassName = `${mergedClassName} ${className}`;
+    } else {
+      mergedClassName = className;
+    }
+  }
+
+  return cloneElement(child, {
+    'id': triggerId,
+    'aria-expanded': open,
+    'aria-controls': contentId,
+    'className': mergedClassName,
+    'onClick': (e: ReactMouseEvent) => {
+      child.props.onClick?.(e);
+      if (!e.defaultPrevented) {
+        handleClick(e);
+      }
+    }
+  });
+};
+
+/**
+ * Content region that expands/collapses based on expansion state.
+ *
+ * Focus behaviour:
+ * - When content collapses, focus automatically returns to the trigger button if content had focus
+ * - When trigger is conditionally unmounted while open, focus moves to document.body
+ *   (consider using CSS visibility instead of conditional rendering, or manage focus manually)
+ */
+const ExpansionContent: FC<CardExpansionContentProps> = ({ children, className, ariaLabel }) => {
+  const { open, contentId, triggerId } = useCardExpansion();
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const element = contentRef.current;
+    if (Type.isNullable(element)) {
+      return;
+    }
+    if (open) {
+      element.removeAttribute('inert');
+    } else {
+      element.setAttribute('inert', '');
+
+      if (element.contains(document.activeElement)) {
+        const trigger = document.getElementById(triggerId);
+        const fallback = element.closest<HTMLElement>('.tox-card');
+        if (Type.isNonNullable(trigger)) {
+          trigger.focus();
+        } else if (Type.isNonNullable(fallback)) {
+          fallback.focus();
+        }
+      }
+    }
+  }, [ open, triggerId ]);
+
+  const contentClassName = Bem.element('tox-card', 'expansion-content', {
+    expanded: open,
+    collapsed: !open
+  }) + (Type.isNonNullable(className) ? ` ${className}` : '');
+
+  const labelProps = Type.isNonNullable(ariaLabel)
+    ? { 'aria-label': ariaLabel }
+    : { 'aria-labelledby': triggerId };
+
+  return (
+    <div
+      ref={contentRef}
+      id={contentId}
+      role="group"
+      {...labelProps}
+      aria-hidden={!open}
+      className={contentClassName}
+    >
+      <div className={Bem.element('tox-card', 'expansion-content-inner')}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 export {
   Root,
   Header,
+  HeaderContent,
+  HeaderActions,
   Body,
   Actions,
-  Highlight
+  Highlight,
+  Divider,
+  Expansion,
+  ExpansionTrigger,
+  ExpansionContent
 };
 
 export { CardList, CardListController } from './CardList';
-export type { CardLayout, CardHighlightType } from './CardTypes';
+export type { CardLayout, CardHighlightType, CardHeaderActionsVisibility } from './CardTypes';
