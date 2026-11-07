@@ -237,6 +237,9 @@ const start = (state: Singleton.Value<State>, editor: Editor) => (e: EditorEvent
       const bodyElm = editor.getBody();
       const docElm = editor.getDoc().documentElement;
 
+      // A previous drag that isn't finished will keep its edge scrolling interval running if we don't stop it
+      stopDragging(state, editor, Optional.none());
+
       state.set({
         element: ceElm,
         dataTransfer: DataTransfer.createDataTransfer(),
@@ -258,7 +261,7 @@ const start = (state: Singleton.Value<State>, editor: Editor) => (e: EditorEvent
 
 const placeCaretAt = (editor: Editor, clientX: number, clientY: number) => {
   editor._selectionOverrides.hideFakeCaret();
-  ClosestCaretCandidate.closestFakeCaretCandidate(editor.getBody(), clientX, clientY).fold(
+  ClosestCaretCandidate.closestFakeCaretCandidate(editor.dom, editor.getBody(), clientX, clientY).fold(
     () => editor.selection.placeCaretAt(clientX, clientY),
     (caretInfo) => {
       const range = editor._selectionOverrides.showCaret(1, caretInfo.node as HTMLElement, caretInfo.position === ClosestCaretCandidate.FakeCaretPosition.Before, false);

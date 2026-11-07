@@ -1,5 +1,6 @@
 .tox when (@custom-properties-enabled = true) {
   --tox-private-color-scheme: light dark;
+  color-scheme: var(--tox-private-color-scheme);
   // Root variables
   // Begin customization by changing these variables as most other variables are derivatives of these.
   --tox-private-background-color: light-dark(#fff, #222F3E);
@@ -31,11 +32,10 @@
     hsl(0 0% 100% / 15%);
   );
 
-  // used only in toolbar-split-button -> should not be a global
-  // --tox-private-border-color-light: light-dark(
-  //     hsl(from var(--tox-private-background-color) h s calc( l - 11)),
-  //     hsl(from var(--tox-private-background-color) h s calc( l + 11))
-  //   );
+  --tox-private-border-color-light: light-dark(
+    hsl(from var(--tox-private-background-color) h s calc(l - 11)),
+    hsl(from var(--tox-private-background-color) h s calc(l + 11))
+  );
 
   --tox-private-text-color: light-dark(var(--tox-private-color-black), var(--tox-private-color-white));
   --tox-private-text-color-muted: light-dark(
@@ -46,8 +46,74 @@
   // Some useful generic variables
   --tox-private-panel-border-radius: 6px; // Dialogs, menues etc.
   --tox-private-control-border-radius: 6px; // Buttons, input fields etc.
+  --tox-private-control-padding-y: var(--tox-private-pad-xs); // Buttons, input fields etc.
+  --tox-private-control-border-width: 1px; // Buttons, input fields etc.
+  --tox-private-control-height: 36px; // Buttons, input fields etc.
+  
+  // Form fields (textfield, select, listbox, color input) have no common ancestor to declare these on.
+  --tox-private-field-background-color: light-dark(
+    var(--tox-private-background-color),
+    hsl(from var(--tox-private-background-color) h s calc(l + 5))
+  ); // Input fields, select boxes etc.
+  --tox-private-field-padding-x: calc(var(--tox-private-pad-xs) + var(--tox-private-control-border-radius) / 4); // Input fields, select boxes etc. Border radius modifier for pill shaped controls
+  --tox-private-field-padding-y: calc((var(--tox-private-control-height) - var(--tox-private-control-line-height) - var(--tox-private-control-border-width) * 2) / 2); // Input fields, select boxes etc.
+  --tox-private-field-focus-box-shadow: 0 0 0 1px var(--tox-private-color-tint); // Input fields, select boxes etc.
+  --tox-private-field-disabled-text-color: hsl(from var(--tox-private-text-color) h s l / 85%); // Input fields, select boxes etc.
+
+  // Bar items: the compact buttons and inputs in the toolbar and menubar (toolbar buttons, split buttons, the number input,
+  // menubar buttons) — not .tox-button. The toolbar and menubar rows are sized from them, so changing these affects all of those components.
+  --tox-private-bar-item-height: 28px;
+  --tox-private-bar-item-spacing-x: 1px;
+  --tox-private-bar-item-spacing-y: 5px;
+  --tox-private-bar-item-border-radius: 3px;
+  --tox-private-toggled-background-color: light-dark(
+    color-mix(in srgb, var(--tox-private-color-tint) 35%, white),
+    color-mix(in srgb, var(--tox-private-color-tint) 65%, white)
+  ); // Toggled on toolbar buttons, active menubar buttons, enabled collection items etc.
+  --tox-private-bar-padding-x: 11px; // Toolbar groups, the menubar, toolbar rows of color swatches and image selectors
+  
+  --tox-private-toolbar-button-bespoke-background-color: light-dark(
+    hsl(from var(--tox-private-background-color) h s calc(l - 3)),
+    hsl(from var(--tox-private-background-color) h s calc(l + 7))
+  ); // Toolbar buttons with a dynamic text label, the toolbar number input, the context form size input
+
+  // Background of surfaces raised above the editor (dialogs, menus, onboarding promotion icons).
+  --tox-private-background-elevated: light-dark(
+    var(--tox-private-background-color),
+    hsl(from var(--tox-private-background-color) h s calc(l + 5))
+  );
+
+  // Links: the default skin derives the link color from a mix of black and tint; the dark skin lightens the tint instead.
+  --tox-private-link-color: light-dark(
+    color-mix(in srgb, var(--tox-private-color-black) 60%, var(--tox-private-color-tint)),
+    hsl(from var(--tox-private-color-tint) h s calc(l + 25))
+  ); // Dialog body links, onboarding links
+  // Hover and active move away from the background: darker in light mode, lighter in dark mode.
+  --tox-private-link-hover-color: light-dark(
+    hsl(from var(--tox-private-link-color) h s calc(l - 20)),
+    hsl(from var(--tox-private-link-color) h s calc(l + 20))
+  );
+  --tox-private-link-active-color: light-dark(
+    hsl(from var(--tox-private-link-color) h s calc(l - 30)),
+    hsl(from var(--tox-private-link-color) h s calc(l + 30))
+  );
+  --tox-private-link-focus-outline-border-radius: 1px;
+
+  // Promotion buttons: the menubar promotion link and the onboarding promotion button
+  --tox-private-promotion-button-height: calc(var(--tox-private-font-size-sm) * 1.9);
+
+  // Shadows
+  --tox-private-modal-box-shadow:
+    0 16px 16px -10px hsl(from var(--tox-private-color-black) h s l / 15%),
+    0 0 40px 1px hsl(from var(--tox-private-color-black) h s l / 15%); // Dialogs, the onboarding dialog
+  --tox-private-raised-box-shadow: 0 4px 8px 0 hsl(from var(--tox-private-color-black) h s l / 10%); // Comments, hovered cards, revision history items
+  --tox-private-popup-box-shadow:
+    0 0 2px 0 hsl(from var(--tox-private-color-black) h s l / 20%),
+    0 4px 8px 0 hsl(from var(--tox-private-color-black) h s l / 15%); // Dropdowns, pops (menus too, but the dark skin removes their shadow)
+  --tox-private-color-error-element-focus-box-shadow: 0 0 0 1px var(--tox-private-color-error-element-focus-color);
 
   // Focus outline
+  --tox-private-control-focus-box-shadow: inset 0 0 0 1px var(--tox-private-color-white), 0 0 0 2px var(--tox-private-color-tint);
   --tox-private-keyboard-focus-outline-width: 2px;
   --tox-private-keyboard-focus-outline-color: light-dark(
       var(--tox-private-color-tint),
@@ -77,6 +143,7 @@
   --tox-private-z-index-resize-handle: 1298;
   --tox-private-z-index-throbber: 1299;
   --tox-private-z-index-sink: 1300;
+  --tox-private-z-index-onboarding-overlay: 1302;
 
   // sink z-index stack
   // Note: these are rendered inside the sink so aren't affected by the other global z-index variables

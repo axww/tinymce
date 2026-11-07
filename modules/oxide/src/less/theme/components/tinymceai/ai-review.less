@@ -11,6 +11,22 @@
     @diff-preview-dim-overlay-color
   );
 
+  // Groups add their own spacing so we need to remove the ai__scroll default padding and list gap.
+  .tox-ai__scroll:has(.tox-card-group) {
+    padding-top: 0;
+    padding-inline: 0;
+
+    .tox-ai__review-sidebar-container .tox-card-list {
+      gap: 0;
+    }
+
+    // Without the ai__scroll padding the alert above the groups would run to the sides of the sidebar
+    .tox-ai__review-sidebar-container > .tox-alert {
+      width: auto;
+      margin-inline: 12px;
+    }
+  }
+
   .tox-ai__scroll {
     .tox-ai__review-sidebar-container {
       scrollbar-gutter: stable;
