@@ -11,9 +11,11 @@
     "test": "echo 'No tests'",
     "build": "grunt build",
     "start": "grunt start",
+    "watch-custom-properties": "grunt watch --custom-properties",
     "prepublishOnly": "bun ci",
     "ci": "grunt build",
-    "css-parity": "bun tools/css-parity/cli.ts"
+    "css-parity": "bun tools/css-parity/cli.ts",
+    "custom-properties-check": "node tools/custom-properties/check.js"
   },
   "keywords": [
     "TinyMCE"
@@ -25,6 +27,7 @@
     "./skins/ui/default/skin.ts": "./build/skins/ui/default/skin.ts",
     "./skins/ui/default/content.ts": "./build/skins/ui/default/content.ts",
     "./skins/ui/default/skin.css": "./build/skins/ui/default/skin.css",
+    "./custom-properties/types.ts": "./build/custom-properties/types.ts",
     "./build/*": "./build/*",
     "./src/less/*": "./src/less/*"
   },
@@ -38,6 +41,9 @@
       ],
       "./skins/ui/default/skin.css": [
         "./build/skins/ui/default/skin.css"
+      ],
+      "./custom-properties/types.ts": [
+        "./build/custom-properties/types.ts"
       ]
     }
   },
@@ -49,6 +55,7 @@
     "build/skins/ui/**/*.ts",
     "build/skins/ui/**/*.css.map",
     "build/skins/ui/**/*.woff",
+    "build/custom-properties/types.ts",
     "src/less/**/*",
     "src/svg/**/*",
     "src/fonts/**/*",

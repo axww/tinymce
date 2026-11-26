@@ -39,7 +39,9 @@ module.exports = function (grunt) {
     watch: {
       less: {
         files: './src/**/*.less',
-        tasks: ['compileLess', 'cssmin']
+        // Regenerating the custom property manifest compiles two more skins on every save, so
+        // it is opt-in (`--custom-properties`) for the oxide-components Storybook panel.
+        tasks: ['compileLess', 'cssmin', ...(grunt.option('custom-properties') ? ['generateCustomProperties'] : [])]
       },
       html: {
         files: './src/demo/*.html',
@@ -95,7 +97,8 @@ module.exports = function (grunt) {
     'cssmin',
     'generateJsSkins',
     'addLicenseHeaders',
-    'generateTsDefinitions'
+    'generateCustomProperties',
+    'generateClassDefinitions'
   ]);
 
   grunt.registerTask('start', [
